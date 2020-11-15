@@ -9,6 +9,7 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -17,15 +18,25 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import java.util.Arrays;
+import java.util.Queue;
 import java.util.UUID;
 
 import win.lioil.bluetooth.APP;
+import win.lioil.bluetooth.IPackageNotification;
+import win.lioil.bluetooth.MergePackage;
+import win.lioil.bluetooth.MockRequestPackages;
+import win.lioil.bluetooth.MockResponsePackages;
+import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
+
+import static win.lioil.bluetooth.ble.BleServerActivity.UUID_CHAR_WRITE_NOTIFY;
+import static win.lioil.bluetooth.ble.BleServerActivity.UUID_DESC_NOTITY;
+import static win.lioil.bluetooth.ble.BleServerActivity.UUID_SERVICE;
 
 /**
  * BLE客户端(主机/中心设备/Central)
  */
-public class BleClientActivity extends Activity {
+public class BleClientActivity extends Activity implements IPackageNotification {
     private static final String TAG = BleClientActivity.class.getSimpleName();
     private EditText mWriteET;
     private TextView mTips;
@@ -35,6 +46,9 @@ public class BleClientActivity extends Activity {
 
     // 与服务端连接的Callback
     public BluetoothGattCallback mBluetoothGattCallback = new BluetoothGattCallback() {
+
+
+
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             BluetoothDevice dev = gatt.getDevice();
@@ -89,7 +103,17 @@ public class BleClientActivity extends Activity {
             UUID uuid = characteristic.getUuid();
             String valueStr = new String(characteristic.getValue());
             Log.i(TAG, String.format("onCharacteristicChanged:%s,%s,%s,%s", gatt.getDevice().getName(), gatt.getDevice().getAddress(), uuid, valueStr));
-            logTv("通知Characteristic[" + uuid + "]:\n" + valueStr);
+            //logTv("通知Characteristic[" + uuid + "]:\n" + valueStr);
+
+            MergePackage.getInstance().appendPackage(characteristic.getValue());
+
+            if(MergePackage.getInstance().isReceiveLastPackage()){
+                //Client 最后一包儿后，把Log打出来
+                String rspWholeJson = MergePackage.getInstance().exportToJson();
+                logTv("收到所有Server的Rsp JSON");
+                logTv(rspWholeJson);
+
+            }
         }
 
         @Override
@@ -126,6 +150,19 @@ public class BleClientActivity extends Activity {
             }
         });
         rv.setAdapter(mBleDevAdapter);
+
+        //注册 Package 的观察者
+        PackageRegister.getInstance().addedPackageListener(this);
+
+
+        //TODO:还不是明白为什么要写在这里？而之前的 read 那个不需要写入
+        BluetoothGattService service = new BluetoothGattService(UUID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
+        BluetoothGattCharacteristic characteristicWrite = new BluetoothGattCharacteristic(UUID_CHAR_WRITE_NOTIFY,
+                BluetoothGattCharacteristic.PROPERTY_WRITE|BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE);
+        characteristicWrite.addDescriptor(new BluetoothGattDescriptor(UUID_DESC_NOTITY, BluetoothGattCharacteristic.PERMISSION_WRITE));
+        service.addCharacteristic(characteristicWrite);
+
+
     }
 
     @Override
@@ -153,7 +190,7 @@ public class BleClientActivity extends Activity {
     // 注意：连续频繁读写数据容易失败，读写操作间隔最好200ms以上，或等待上次回调完成后再进行下次读写操作！
     // 读取数据成功会回调->onCharacteristicChanged()
     public void read(View view) {
-        BluetoothGattService service = getGattService(BleServerActivity.UUID_SERVICE);
+        BluetoothGattService service = getGattService(UUID_SERVICE);
         if (service != null) {
             BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_READ_NOTIFY);//通过UUID获取可读的Characteristic
             mBluetoothGatt.readCharacteristic(characteristic);
@@ -163,28 +200,71 @@ public class BleClientActivity extends Activity {
     // 注意：连续频繁读写数据容易失败，读写操作间隔最好200ms以上，或等待上次回调完成后再进行下次读写操作！
     // 写入数据成功会回调->onCharacteristicWrite()
     public void write(View view) {
-        BluetoothGattService service = getGattService(BleServerActivity.UUID_SERVICE);
+        BluetoothGattService service = getGattService(UUID_SERVICE);
+        final BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可写的Characteristic
+
         if (service != null) {
+//            String text = mWriteET.getText().toString();
+//            BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_WRITE);//通过UUID获取可写的Characteristic
+//            characteristic.setValue(text.getBytes()); //单次最多20个字节
+//            mBluetoothGatt.writeCharacteristic(characteristic);
+
             String text = mWriteET.getText().toString();
-            BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_WRITE);//通过UUID获取可写的Characteristic
-            characteristic.setValue(text.getBytes()); //单次最多20个字节
-            mBluetoothGatt.writeCharacteristic(characteristic);
+
+            try {
+                //根据Client端输入模拟数据：客户端输入，01，02，03这类的即可
+                final Queue<byte[]> mockReqBytes = MockRequestPackages.getMockReqBytes(text.getBytes());
+                if(mockReqBytes!=null){
+
+                    final int packageCount = mockReqBytes.size();
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            for (int index = 0;index<packageCount;index++){
+                                byte[] peekByte = mockReqBytes.poll();
+                                characteristic.setValue(peekByte);
+                                mBluetoothGatt.writeCharacteristic(characteristic);
+                                logTv("写入服务端分包儿:"+(index+1)+"/"+packageCount);
+                                logTv("分包儿内容:"+new String(peekByte));
+                                SystemClock.sleep(1000);
+                            }
+                        }
+                    }).start();
+                }
+
+            }catch (Exception e){
+                logTv("写入服务端错误！");
+            }
         }
+
+
+
+
     }
 
     // 设置通知Characteristic变化会回调->onCharacteristicChanged()
     public void setNotify(View view) {
-        BluetoothGattService service = getGattService(BleServerActivity.UUID_SERVICE);
+        BluetoothGattService service = getGattService(UUID_SERVICE);
         if (service != null) {
             // 设置Characteristic通知
             BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_READ_NOTIFY);//通过UUID获取可通知的Characteristic
             mBluetoothGatt.setCharacteristicNotification(characteristic, true);
 
+            // 设置Characteristic通知
+            BluetoothGattCharacteristic w_characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可通知的Characteristic
+            mBluetoothGatt.setCharacteristicNotification(w_characteristic, true);
+
             // 向Characteristic的Descriptor属性写入通知开关，使蓝牙设备主动向手机发送数据
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(BleServerActivity.UUID_DESC_NOTITY);
+            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID_DESC_NOTITY);
             // descriptor.setValue(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);//和通知类似,但服务端不主动发数据,只指示客户端读取数据
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             mBluetoothGatt.writeDescriptor(descriptor);
+
+            // 向Characteristic的Descriptor属性写入通知开关，使蓝牙设备主动向手机发送数据
+            BluetoothGattDescriptor w_descriptor = w_characteristic.getDescriptor(UUID_DESC_NOTITY);
+            w_descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+            mBluetoothGatt.writeDescriptor(w_descriptor);
+
         }
     }
 
@@ -211,5 +291,10 @@ public class BleClientActivity extends Activity {
                 mTips.append(msg + "\n\n");
             }
         });
+    }
+
+    @Override
+    public void receiveLastPackage() {
+
     }
 }

@@ -55,6 +55,10 @@ public class MainActivity extends Activity {
                 }
             }
         }
+          //测试内存泄漏
+//        while (true){
+//            MockResponsePackages.receive2Package();
+//        }
     }
 
     public void btClient(View view) {

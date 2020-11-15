@@ -22,19 +22,24 @@ import android.util.Log;
 import android.widget.TextView;
 
 import java.util.Arrays;
+import java.util.Queue;
 import java.util.UUID;
 
 import win.lioil.bluetooth.APP;
+import win.lioil.bluetooth.IPackageNotification;
+import win.lioil.bluetooth.MergePackage;
+import win.lioil.bluetooth.MockResponsePackages;
+import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
 
 /**
  * BLE服务端(从机/外围设备/peripheral)
  */
-public class BleServerActivity extends Activity {
+public class BleServerActivity extends Activity implements IPackageNotification {
     public static final UUID UUID_SERVICE = UUID.fromString("10000000-0000-0000-0000-000000000000"); //自定义UUID
     public static final UUID UUID_CHAR_READ_NOTIFY = UUID.fromString("11000000-0000-0000-0000-000000000000");
     public static final UUID UUID_DESC_NOTITY = UUID.fromString("11100000-0000-0000-0000-000000000000");
-    public static final UUID UUID_CHAR_WRITE = UUID.fromString("12000000-0000-0000-0000-000000000000");
+    public static final UUID UUID_CHAR_WRITE_NOTIFY = UUID.fromString("12000000-0000-0000-0000-000000000000");
     private static final String TAG = BleServerActivity.class.getSimpleName();
     private TextView mTips;
     private BluetoothLeAdvertiser mBluetoothLeAdvertiser; // BLE广播
@@ -73,16 +78,95 @@ public class BleServerActivity extends Activity {
             String response = "CHAR_" + (int) (Math.random() * 100); //模拟数据
             mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, response.getBytes());// 响应客户端
             logTv("客户端读取Characteristic[" + characteristic.getUuid() + "]:\n" + response);
+
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            String response2 = "SEONND_" + (int) (Math.random() * 100); //模拟数据
+            mBluetoothGattServer.sendResponse(device, requestId+1, BluetoothGatt.GATT_SUCCESS, offset, response2.getBytes());// 响应客户端
+
+            logTv("客户端读取Characteristic[" + characteristic.getUuid() + "]:\n" + response2);
         }
 
         @Override
-        public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId, BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, int offset, byte[] requestBytes) {
+        public void onCharacteristicWriteRequest(final BluetoothDevice device, final int requestId, final BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, final int offset, final byte[] requestBytes) {
             // 获取客户端发过来的数据
             String requestStr = new String(requestBytes);
             Log.i(TAG, String.format("onCharacteristicWriteRequest:%s,%s,%s,%s,%s,%s,%s,%s", device.getName(), device.getAddress(), requestId, characteristic.getUuid(),
                     preparedWrite, responseNeeded, offset, requestStr));
+
+            logTv("收到 客户端写入 Characteristic[" + characteristic.getUuid() + "]:\n" + requestStr);
             mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, requestBytes);// 响应客户端
-            logTv("客户端写入Characteristic[" + characteristic.getUuid() + "]:\n" + requestStr);
+
+
+            MergePackage.getInstance().appendPackage(requestBytes);
+
+            if(MergePackage.getInstance().isReceiveLastPackage()){
+                //最后一包儿后，发送 response
+                String clientWholeJson = MergePackage.getInstance().exportToJson();
+                logTv("收到所有Client的Req JSON");
+
+                try {
+                    final Queue<byte[]> mockRspBytes = MockResponsePackages.getMockRspBytes(clientWholeJson);
+                    if(mockRspBytes!=null){
+
+                        final int packageCount = mockRspBytes.size();
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                for (int index = 0;index<packageCount;index++){
+                                    byte[] peekByte = mockRspBytes.poll();
+                                    characteristic.setValue(peekByte);
+                                    mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
+                                    SystemClock.sleep(1000);
+                                    logTv("回写 客户端Characteristic[" + characteristic.getUuid() + "]:\n" + new String(peekByte));
+                                 }
+                            }
+                        }).start();
+                    }
+
+                }catch (Exception e){
+                    logTv("Error！");
+                }
+            }
+
+//            final Queue<byte[]> splitByte = MockResponsePackages.getBusinessPackage(requestBytes);
+//            final int packageCount = splitByte.size();
+//
+//            if (splitByte!=null){
+//                new Thread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//
+//                        //iOS is OK
+////                        for (int index = 0;index<packageCount;index++){
+////
+////                            byte[] peekByte = splitByte.poll();
+////                            characteristic.setValue(peekByte);
+////                            mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
+////
+////                            SystemClock.sleep(1000);
+////                            logTv("回写 客户端Characteristic[" + characteristic.getUuid() + "]:\n" + new String(peekByte));
+////                        }
+//
+//                        for (int index = 0;index<packageCount;index++){
+//                            byte[] peekByte = splitByte.poll();
+//                            characteristic.setValue(peekByte);
+//                            mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
+//                            mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, peekByte);
+//                            SystemClock.sleep(1000);
+//                            logTv("回写 客户端Characteristic[" + characteristic.getUuid() + "]:\n" + new String(peekByte));
+//                        }
+//
+//                    }
+//                }).start();
+//            }
+
+
+
         }
 
         @Override
@@ -102,22 +186,23 @@ public class BleServerActivity extends Activity {
             mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value);// 响应客户端
             logTv("客户端写入Descriptor[" + descriptor.getUuid() + "]:\n" + valueStr);
 
-            // 简单模拟通知客户端Characteristic变化
-            if (Arrays.toString(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE).equals(valueStr)) { //是否开启通知
-                final BluetoothGattCharacteristic characteristic = descriptor.getCharacteristic();
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        for (int i = 0; i < 5; i++) {
-                            SystemClock.sleep(3000);
-                            String response = "CHAR_" + (int) (Math.random() * 100); //模拟数据
-                            characteristic.setValue(response);
-                            mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
-                            logTv("通知客户端改变Characteristic[" + characteristic.getUuid() + "]:\n" + response);
-                        }
-                    }
-                }).start();
-            }
+            //为了调试Commissioningg App 这里就不发了
+//            // 简单模拟通知客户端Characteristic变化
+//            if (Arrays.toString(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE).equals(valueStr)) { //是否开启通知
+//                final BluetoothGattCharacteristic characteristic = descriptor.getCharacteristic();
+//                new Thread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        for (int i = 0; i < 5; i++) {
+//                            SystemClock.sleep(3000);
+//                            String response = "CHAR_" + (int) (Math.random() * 100); //模拟数据
+//                            characteristic.setValue(response);
+//                            mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
+//                            logTv("通知客户端改变Characteristic[" + characteristic.getUuid() + "]:\n" + response);
+//                        }
+//                    }
+//                }).start();
+//            }
         }
 
         @Override
@@ -168,20 +253,26 @@ public class BleServerActivity extends Activity {
         mBluetoothLeAdvertiser.startAdvertising(settings, advertiseData, scanResponse, mAdvertiseCallback);
 
         // 注意：必须要开启可连接的BLE广播，其它设备才能发现并连接BLE服务端!
-        // =============启动BLE蓝牙服务端=====================================================================================
+        // =============F服务端=====================================================================================
         BluetoothGattService service = new BluetoothGattService(UUID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
         //添加可读+通知characteristic
         BluetoothGattCharacteristic characteristicRead = new BluetoothGattCharacteristic(UUID_CHAR_READ_NOTIFY,
-                BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_READ);
+                BluetoothGattCharacteristic.PROPERTY_WRITE|BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_READ);
         characteristicRead.addDescriptor(new BluetoothGattDescriptor(UUID_DESC_NOTITY, BluetoothGattCharacteristic.PERMISSION_WRITE));
         service.addCharacteristic(characteristicRead);
-        //添加可写characteristic
-        BluetoothGattCharacteristic characteristicWrite = new BluetoothGattCharacteristic(UUID_CHAR_WRITE,
-                BluetoothGattCharacteristic.PROPERTY_WRITE, BluetoothGattCharacteristic.PERMISSION_WRITE);
+
+        //添加可写+通知characteristic
+        BluetoothGattCharacteristic characteristicWrite = new BluetoothGattCharacteristic(UUID_CHAR_WRITE_NOTIFY,
+                BluetoothGattCharacteristic.PROPERTY_WRITE|BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE);
+        characteristicWrite.addDescriptor(new BluetoothGattDescriptor(UUID_DESC_NOTITY, BluetoothGattCharacteristic.PERMISSION_WRITE));
         service.addCharacteristic(characteristicWrite);
+
         if (bluetoothManager != null)
             mBluetoothGattServer = bluetoothManager.openGattServer(this, mBluetoothGattServerCallback);
         mBluetoothGattServer.addService(service);
+
+        //注册 Package 的观察者
+        PackageRegister.getInstance().addedPackageListener(this);
     }
 
     @Override
@@ -203,5 +294,13 @@ public class BleServerActivity extends Activity {
                 mTips.append(msg + "\n\n");
             }
         });
+    }
+
+    @Override
+    public void receiveLastPackage() {
+
+
+
+
     }
 }

@@ -1,109 +1,50 @@
 package win.lioil.bluetooth;
 
-import org.junit.Test;
+import android.util.Log;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+
 import java.util.Queue;
 
-import static org.junit.Assert.*;
+public class MockResponsePackages {
+    public static Queue<byte[]> getMockRspBytes(String wholeJson) throws JSONException {
 
-/**
- * Example local unit test, which will execute on the development machine (host).
- *
- * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
- */
-public class ExampleUnitTest {
-    @Test
-    public void receive2LittlePackage() {
 
-        //组织测试数据1
-        String json = "{" +
-                "    \"m\": \"METHOD_NAME\"," +
-                "    \"p\": {" +
-                "        \"t\": \"\"" +
-                "    }" +
-                "}";
+        JSONObject reqJson = new JSONObject(wholeJson);
+        String m = reqJson.get("m").toString();
 
-        json = json.trim().replace(" ","");
-        Queue<byte[]> bytes = SplitPackage.splitByte(json.getBytes());
-
-        int packageCount = bytes.size();
-        if (packageCount>1){
-            for (int index = 0;index<packageCount;index++){
-                byte[] peekByte = bytes.poll();
-                MergePackage.getInstance().appendPackage(peekByte);
+        try{
+            switch (m){
+                case "conh":{
+                    return getConhRsp();
+                }
             }
+        }catch (Exception e){
+            Log.e("Mock",e.getMessage());
         }
 
-        String finalJson = MergePackage.getInstance().exportToJson();
-        assertEquals(finalJson, json);
-
-        //组织测试数据2
-        String json2 = "{" +
-                "    \"m\": \"METHOD_NAME\"," +
-                "    \"p\": {" +
-                "        \"t\": \"\"" +
-                "    }" +
-                "}";
-
-        json2 = json2.trim().replace(" ","");
-        Queue<byte[]> bytes2 = SplitPackage.splitByte(json2.getBytes());
-
-        int packageCount2 = bytes2.size();
-        if (packageCount2>1){
-            for (int index = 0;index<packageCount2;index++){
-                byte[] peekByte = bytes2.poll();
-                MergePackage.getInstance().appendPackage(peekByte);
-            }
-        }
-
-        String finalJson2 = MergePackage.getInstance().exportToJson();
-        assertEquals(json2, finalJson2);
-
-//        //有效payload 18个一组
-//        ByteBuffer buffer = ByteBuffer.allocate(18);
-//
-//
-//        ArrayList<byte[]> result = new ArrayList<>();
-//        //Queue 在 poll()后的size会改变，所以创建一个变量去记录它
-//        int packageCount = bytes.size();
-//        if (packageCount>1){
-//            for (int index = 0;index<packageCount;index++){
-//
-//                byte[] peekByte = bytes.poll();
-//
-//                //去掉前两位
-//                for (int i = 2; i < peekByte.length; i++) {
-//                    if (peekByte[i] != 0x00) {
-//                        buffer.put(peekByte[i]);
-//                    }
-//                }
-//
-//                byte[] validByte = new byte[buffer.position()];
-//                //转入读取模式
-//                buffer.flip();
-//                buffer.get(validByte);
-//
-//                result.add(validByte);
-//                //转入写入模式
-//                buffer.compact();
-//
-//            }
-//        }
 
 
-        //验证
-//        String str1 = new String(result.get(0));
-//        String str2 = new String(result.get(1));
+        return null;
 
-//        assertEquals(str1+str2, json);
     }
 
-    //每个JSON分包儿后大于10
-    @Test
-    public void receive2Package() {
+    private static Queue<byte[]> getConhRsp(){
+        String json = "{" +
+                "\"m\": \"conh\"," +
+                "\"r\": {}," +
+                "\"e\":0" +
+                "}";
+
+       return SplitPackage.splitByte(json.getBytes());
+    }
+
+
+//------------------以下方法和逻辑无关---------------------------------------//
+    //循环他测试内存溢出
+    public static void receive2Package() {
 
         //组织测试数据1
         String json = "{\\" +
@@ -148,7 +89,7 @@ public class ExampleUnitTest {
         }
 
         String finalJson = MergePackage.getInstance().exportToJson();
-        assertEquals(finalJson, json);
+
 
         //组织测试数据2，大于15个包儿了，出错了
         String json2 = "{\\" +
@@ -181,7 +122,6 @@ public class ExampleUnitTest {
                 "}";
 
         json2 = json2.trim().replace(" ","");
-        json = json.trim().replace("\\","");
         Queue<byte[]> bytes2 = SplitPackage.splitByte(json2.getBytes());
 
         int packageCount2 = bytes2.size();
@@ -193,15 +133,9 @@ public class ExampleUnitTest {
         }
 
         String finalJson2 = MergePackage.getInstance().exportToJson();
-        assertNotEquals(json2, finalJson2);
+
 
     }
 
 
-    @Test
-    public void memberTest() {
-        while (true){
-            receive2Package();
-        }
-    }
 }

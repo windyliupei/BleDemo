@@ -93,6 +93,30 @@ public class BtBase {
         isSending = false;
     }
 
+
+    public void sendMsg(String msg,Boolean sendAsByte) {
+
+        if (sendAsByte){
+            if (checkSend()) return;
+            isSending = true;
+            try {
+                mOut.writeInt(FLAG_MSG); //消息标记
+                byte[] sendWholePackage = msg.getBytes();
+                mOut.write(sendWholePackage);
+                mOut.flush();
+                notifyUI(Listener.MSG, "发送短消息：" + msg);
+            } catch (Throwable e) {
+                close();
+            }
+            isSending = false;
+        }else{
+            sendMsg(msg);
+        }
+
+
+    }
+
+
     /**
      * 发送文件
      */

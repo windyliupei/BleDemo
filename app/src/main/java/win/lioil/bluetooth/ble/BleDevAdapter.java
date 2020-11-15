@@ -8,6 +8,7 @@ import android.bluetooth.le.ScanResult;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,9 +32,12 @@ public class BleDevAdapter extends RecyclerView.Adapter<BleDevAdapter.VH> {
         public void onScanResult(int callbackType, ScanResult result) {
             BleDev dev = new BleDev(result.getDevice(), result);
             if (!mDevices.contains(dev)) {
-                mDevices.add(dev);
-                notifyDataSetChanged();
-                Log.i(TAG, "onScanResult: " + result); // result.getScanRecord() 获取BLE广播数据
+                if (!TextUtils.isEmpty(dev.dev.getName())){
+                    mDevices.add(dev);
+                    notifyDataSetChanged();
+                    Log.i(TAG, "onScanResult: " + result); // result.getScanRecord() 获取BLE广播数据
+                }
+
             }
         }
     };
