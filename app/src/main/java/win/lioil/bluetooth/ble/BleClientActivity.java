@@ -28,6 +28,7 @@ import win.lioil.bluetooth.MockRequestPackages;
 import win.lioil.bluetooth.MockResponsePackages;
 import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
+import win.lioil.bluetooth.util.Util;
 
 import static win.lioil.bluetooth.ble.BleServerActivity.UUID_CHAR_WRITE_NOTIFY;
 
@@ -95,7 +96,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
             UUID uuid = characteristic.getUuid();
             String valueStr = new String(characteristic.getValue());
             Log.i(TAG, String.format("onCharacteristicWrite:%s,%s,%s,%s,%s", gatt.getDevice().getName(), gatt.getDevice().getAddress(), uuid, valueStr, status));
-            logTv("写入Characteristic[" + uuid + "]:\n" + valueStr);
+            logTv("写入Characteristic[" + uuid + "]:\n" + Util.bytesToHex(characteristic.getValue()));
         }
 
         @Override

@@ -17,8 +17,7 @@ import okhttp3.Response;
 
 public class MockResponsePackages {
 
-    //static String webAddress = "http://42.159.80.241:8888/app/v1/api/mock/mock/";
-    static String webAddress = "http://192.168.3.65:8888/app/v1/api/mock/mock/";
+    static String webAddress = "http://42.159.80.241:8888/app/v1/api/mock/mock/";
 
     public static Queue<byte[]> getMockRspBytes(String wholeJson) throws JSONException {
 
