@@ -18,16 +18,11 @@ import java.util.Queue;
 public class MockRequestPackages {
 
 
-    public static Queue<byte[]> getMockReqBytes(byte[] inputCmd){
+    public static Queue<byte[]> getMockReqBytes(byte[] inputFileName){
 
-        String cmdStr = new String(inputCmd);
-        Queue<byte[]> result = null;
-        switch (cmdStr){
-            case "01":{
-                result = getConh();
-            }
-        }
-        return result;
+        String inputFileNameStr = new String(inputFileName);
+
+        return getApiReq(inputFileNameStr);
     }
 
     private static Queue<byte[]> getConh(){
@@ -41,6 +36,12 @@ public class MockRequestPackages {
 
         Queue<byte[]> splitByte = SplitPackage.splitByte(json.getBytes());
 
+        return splitByte;
+    }
+
+    private static Queue<byte[]> getApiReq(String fileName){
+        String json = "{\"test\":\""+fileName+"\"}";
+        Queue<byte[]> splitByte = SplitPackage.splitByte(json.getBytes());
         return splitByte;
     }
 

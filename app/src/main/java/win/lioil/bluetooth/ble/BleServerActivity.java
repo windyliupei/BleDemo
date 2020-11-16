@@ -114,7 +114,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
             if(MergePackage.getInstance().isReceiveLastPackage()){
                 //最后一包儿后，发送 response
                 String clientWholeJson = MergePackage.getInstance().exportToJson();
-                logTv("收到所有Client的Req JSON");
+                logTv("收到所有Client的Req JSON:"+clientWholeJson);
 
                 try {
                     final Queue<byte[]> mockRspBytes = MockResponsePackages.getMockRspBytes(clientWholeJson);

@@ -86,7 +86,8 @@ public class MergePackage {
             buffer.clear();
             setReceiveLastPackage(false);
         }
-
+        //TODO:还得判断以地位是否 ack｜fragmentation
+        //1010 or 1110
         setReceiveLastPackage(current==total
                 && buffer.position()>1);
     }
