@@ -8,6 +8,9 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.CompoundButton;
+import android.widget.RadioButton;
+import android.widget.Switch;
 
 import win.lioil.bluetooth.ble.BleClientActivity;
 import win.lioil.bluetooth.ble.BleServerActivity;
@@ -15,6 +18,9 @@ import win.lioil.bluetooth.bt.BtClientActivity;
 import win.lioil.bluetooth.bt.BtServerActivity;
 
 public class MainActivity extends Activity {
+
+    int hubOrSocket = 1;
+    int online = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +65,29 @@ public class MainActivity extends Activity {
 //        while (true){
 //            MockResponsePackages.receive2Package();
 //        }
+        Switch onlineSwch = (Switch)findViewById(R.id.typeOnline);
+        onlineSwch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked){//online
+                    online = 1;
+                }else{
+                    online = 0;
+                }
+            }
+        });
+
+        RadioButton typeRbtn = (RadioButton)findViewById(R.id.rBtn_Hub);
+        typeRbtn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked){//HUB
+                    hubOrSocket = 1;
+                }else{
+                    hubOrSocket = 0;
+                }
+            }
+        });
     }
 
     public void btClient(View view) {
@@ -74,6 +103,14 @@ public class MainActivity extends Activity {
     }
 
     public void bleServer(View view) {
-        startActivity(new Intent(this, BleServerActivity.class));
+
+        final Intent intent = new Intent(this, BleServerActivity.class);
+
+        intent.putExtra("online",online);
+        intent.putExtra("hubOrSocket",hubOrSocket);
+
+        startActivity(intent);
+
+
     }
 }

@@ -15,6 +15,7 @@ import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.ParcelUuid;
 import android.os.SystemClock;
@@ -192,11 +193,12 @@ public class BleServerActivity extends Activity implements IPackageNotification 
                 .setConnectable(true) //能否连接,广播分为可连接广播和不可连接广播
                 .build();
         //广播数据(必须，广播启动就会发送)
+        byte[] manufacturerData = generateManufacturerData();
         AdvertiseData advertiseData = new AdvertiseData.Builder()
                 .setIncludeDeviceName(true) //包含蓝牙名称
                 .setIncludeTxPowerLevel(true) //包含发射功率级别
                 //TODO:广播数据
-                .addManufacturerData(1, new byte[]{23, 33}) //设备厂商数据，自定义
+                .addManufacturerData(1, manufacturerData) //设备厂商数据，自定义
                 .build();
         //扫描响应数据(可选，当客户端扫描时才发送)
         AdvertiseData scanResponse = new AdvertiseData.Builder()
@@ -257,7 +259,29 @@ public class BleServerActivity extends Activity implements IPackageNotification 
 
     private byte[] generateManufacturerData(){
 
-        byte[] bytes = new byte[7];
+        Intent intent = getIntent();
+        int online = intent.getIntExtra("online", 0);
+        int hubOrSocket = intent.getIntExtra("hubOrSocket",0);
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        String mac = bluetoothAdapter.getAddress();
+        mac = mac.replace(":","");
+        String typeOnline = "";
+        if (online==0 && hubOrSocket==0){
+            //Socket 离线
+            typeOnline = "00";
+        }else if(online==0 && hubOrSocket==1){
+            //Socket 在线
+            typeOnline = "01";
+        }else if(online==1 && hubOrSocket==0){
+            //HUB 离线
+            typeOnline = "02";
+        }else{
+            //HUB 在线
+            typeOnline = "03";
+        }
+
+
+        byte[] bytes = Util.hexToBytes(mac+typeOnline);
 
         return bytes;
     }

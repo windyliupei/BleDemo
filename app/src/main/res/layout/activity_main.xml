@@ -62,4 +62,40 @@
         android:onClick="bleServer"
         android:text="@string/ble_server"
         app:layout_constraintTop_toBottomOf="@+id/btn_ble_client" />
+
+
+
+    <Switch
+        android:id="@+id/typeOnline"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Online"
+        android:textOn="Online"
+        android:textOff="Offline"
+        app:layout_constraintTop_toBottomOf="@+id/btn_ble_server" />
+
+
+    <RadioGroup
+        android:layout_width="208dp"
+        android:layout_height="72dp"
+        android:checkedButton="@id/rBtn_Hub"
+        app:layout_constraintTop_toBottomOf="@+id/typeOnline"
+        tools:layout_editor_absoluteX="34dp">
+
+        <RadioButton
+            android:id="@+id/rBtn_Hub"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Hub" />
+
+        <RadioButton
+            android:id="@+id/rBtn_Socket"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Socket" />
+    </RadioGroup>
+
+
+
+
 </android.support.constraint.ConstraintLayout>
