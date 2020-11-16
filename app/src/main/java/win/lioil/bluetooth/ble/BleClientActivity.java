@@ -30,7 +30,7 @@ import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
 
 import static win.lioil.bluetooth.ble.BleServerActivity.UUID_CHAR_WRITE_NOTIFY;
-import static win.lioil.bluetooth.ble.BleServerActivity.UUID_DESC_NOTITY;
+
 import static win.lioil.bluetooth.ble.BleServerActivity.UUID_SERVICE;
 
 /**
@@ -159,7 +159,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         BluetoothGattService service = new BluetoothGattService(UUID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
         BluetoothGattCharacteristic characteristicWrite = new BluetoothGattCharacteristic(UUID_CHAR_WRITE_NOTIFY,
                 BluetoothGattCharacteristic.PROPERTY_WRITE|BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE);
-        characteristicWrite.addDescriptor(new BluetoothGattDescriptor(UUID_DESC_NOTITY, BluetoothGattCharacteristic.PERMISSION_WRITE));
+        characteristicWrite.addDescriptor(new BluetoothGattDescriptor(UUID_CHAR_WRITE_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE));
         service.addCharacteristic(characteristicWrite);
 
 
@@ -192,8 +192,8 @@ public class BleClientActivity extends Activity implements IPackageNotification 
     public void read(View view) {
         BluetoothGattService service = getGattService(UUID_SERVICE);
         if (service != null) {
-            BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_READ_NOTIFY);//通过UUID获取可读的Characteristic
-            mBluetoothGatt.readCharacteristic(characteristic);
+            //BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_READ_NOTIFY);//通过UUID获取可读的Characteristic
+            //mBluetoothGatt.readCharacteristic(characteristic);
         }
     }
 
@@ -247,21 +247,22 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         BluetoothGattService service = getGattService(UUID_SERVICE);
         if (service != null) {
             // 设置Characteristic通知
-            BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_READ_NOTIFY);//通过UUID获取可通知的Characteristic
-            mBluetoothGatt.setCharacteristicNotification(characteristic, true);
+//            BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_READ_NOTIFY);//通过UUID获取可通知的Characteristic
+//            mBluetoothGatt.setCharacteristicNotification(characteristic, true);
 
             // 设置Characteristic通知
             BluetoothGattCharacteristic w_characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可通知的Characteristic
             mBluetoothGatt.setCharacteristicNotification(w_characteristic, true);
 
             // 向Characteristic的Descriptor属性写入通知开关，使蓝牙设备主动向手机发送数据
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID_DESC_NOTITY);
-            // descriptor.setValue(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);//和通知类似,但服务端不主动发数据,只指示客户端读取数据
-            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-            mBluetoothGatt.writeDescriptor(descriptor);
+//            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID_DESC_NOTITY);
+//            // descriptor.setValue(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);//和通知类似,但服务端不主动发数据,只指示客户端读取数据
+//            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+//            mBluetoothGatt.writeDescriptor(descriptor);
 
             // 向Characteristic的Descriptor属性写入通知开关，使蓝牙设备主动向手机发送数据
-            BluetoothGattDescriptor w_descriptor = w_characteristic.getDescriptor(UUID_DESC_NOTITY);
+            //BluetoothGattDescriptor w_descriptor = w_characteristic.getDescriptor(UUID_CHAR_WRITE_NOTIFY);
+            BluetoothGattDescriptor w_descriptor = w_characteristic.getDescriptors().get(0);
             w_descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             mBluetoothGatt.writeDescriptor(w_descriptor);
 

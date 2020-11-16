@@ -181,7 +181,7 @@ public class ExampleUnitTest {
                 "}";
 
         json2 = json2.trim().replace(" ","");
-        json = json.trim().replace("\\","");
+        json2 = json2.trim().replace("\\","");
         Queue<byte[]> bytes2 = SplitPackage.splitByte(json2.getBytes());
 
         int packageCount2 = bytes2.size();
@@ -203,5 +203,46 @@ public class ExampleUnitTest {
         while (true){
             receive2Package();
         }
+    }
+
+    @Test
+    public void cal() {
+        SplitPackage.calHead((byte) 0,2,2);
+    }
+
+    @Test
+    public void packageRevers() {
+        String json2 = "{\\" +
+                "    \"employees2\": [\\" +
+                "        {\\" +
+                "            \"skn\": \"123456789012345678901234\",\\" +
+                "            \"lastName\": \"Gates\"\\" +
+                "        },\\" +
+                "        {\\" +
+                "            \"firstName\": \"123456789012345678901234\",\\" +
+                "            \"lastName\": \"Bush\"\\" +
+                "        },\\" +
+                "        {\\" +
+                "            \"firstName\": \"123456789012345678901234\",\\" +
+                "            \"lastName\": \"Carter\"\\" +
+                "        },\\" +
+                "        {\\" +
+                "            \"firstName\": \"123456789012345678901234\",\\" +
+                "            \"lastName\": \"Gates\"\\" +
+                "        },\\" +
+                "        {\\" +
+                "            \"firstName\": \"123456789012345678901234\",\\" +
+                "            \"lastName\": \"Bush\"\\" +
+                "        },\\" +
+                "        {\\" +
+                "            \"firstName\": \"123456789012345678901234\",\\" +
+                "            \"lastName\": \"123456789012345678901234\"\\" +
+                "        }\\" +
+                "    ]\\" +
+                "}";
+
+        json2 = json2.trim().replace(" ","");
+        json2 = json2.trim().replace("\\","");
+        Queue<byte[]> bytes2 = SplitPackage.splitByte(json2.getBytes());
     }
 }

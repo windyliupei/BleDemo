@@ -31,15 +31,20 @@ import win.lioil.bluetooth.MergePackage;
 import win.lioil.bluetooth.MockResponsePackages;
 import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
+import win.lioil.bluetooth.util.Util;
 
 /**
  * BLE服务端(从机/外围设备/peripheral)
  */
 public class BleServerActivity extends Activity implements IPackageNotification {
-    public static final UUID UUID_SERVICE = UUID.fromString("10000000-0000-0000-0000-000000000000"); //自定义UUID
+    //public static final UUID UUID_SERVICE = UUID.fromString("10000000-0000-0000-0000-000000000000"); //自定义UUID
+    public static final UUID UUID_SERVICE = UUID.fromString("0000b304-1212-efde-1523-785feabcd133"); //自定义UUID
     public static final UUID UUID_CHAR_READ_NOTIFY = UUID.fromString("11000000-0000-0000-0000-000000000000");
-    public static final UUID UUID_DESC_NOTITY = UUID.fromString("11100000-0000-0000-0000-000000000000");
-    public static final UUID UUID_CHAR_WRITE_NOTIFY = UUID.fromString("12000000-0000-0000-0000-000000000000");
+    //public static final UUID UUID_DESC_NOTITY = UUID.fromString("11100000-0000-0000-0000-000000000000");
+    //public static final UUID UUID_DESC_NOTITY = UUID.fromString("0000b832-1212-efde-1523-785feabcd133");
+    //public static final UUID UUID_CHAR_WRITE_NOTIFY = UUID.fromString("12000000-0000-0000-0000-000000000000");
+    public static final UUID UUID_CHAR_WRITE_NOTIFY = UUID.fromString("0000b831-1212-efde-1523-785feabcd133");
+    public static final UUID UUID_DESC_NOTITY = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
     private static final String TAG = BleServerActivity.class.getSimpleName();
     private TextView mTips;
     private BluetoothLeAdvertiser mBluetoothLeAdvertiser; // BLE广播
@@ -99,6 +104,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
                     preparedWrite, responseNeeded, offset, requestStr));
 
             logTv("收到 客户端写入 Characteristic[" + characteristic.getUuid() + "]:\n" + requestStr);
+            logTv("收到 客户端写入 Characteristic[" + characteristic.getUuid() + "]:\n" + Util.bytesToHex(requestBytes));
             mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, requestBytes);// 响应客户端
 
 
@@ -123,6 +129,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
                                     mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
                                     SystemClock.sleep(1000);
                                     logTv("回写 客户端Characteristic[" + characteristic.getUuid() + "]:\n" + new String(peekByte));
+                                    logTv("回写 客户端Characteristic[" + characteristic.getUuid() + "]:\n" + Util.bytesToHex(peekByte));
                                  }
                             }
                         }).start();
@@ -132,41 +139,6 @@ public class BleServerActivity extends Activity implements IPackageNotification 
                     logTv("Error！");
                 }
             }
-
-//            final Queue<byte[]> splitByte = MockResponsePackages.getBusinessPackage(requestBytes);
-//            final int packageCount = splitByte.size();
-//
-//            if (splitByte!=null){
-//                new Thread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//
-//                        //iOS is OK
-////                        for (int index = 0;index<packageCount;index++){
-////
-////                            byte[] peekByte = splitByte.poll();
-////                            characteristic.setValue(peekByte);
-////                            mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
-////
-////                            SystemClock.sleep(1000);
-////                            logTv("回写 客户端Characteristic[" + characteristic.getUuid() + "]:\n" + new String(peekByte));
-////                        }
-//
-//                        for (int index = 0;index<packageCount;index++){
-//                            byte[] peekByte = splitByte.poll();
-//                            characteristic.setValue(peekByte);
-//                            mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
-//                            mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, peekByte);
-//                            SystemClock.sleep(1000);
-//                            logTv("回写 客户端Characteristic[" + characteristic.getUuid() + "]:\n" + new String(peekByte));
-//                        }
-//
-//                    }
-//                }).start();
-//            }
-
-
-
         }
 
         @Override
@@ -185,24 +157,6 @@ public class BleServerActivity extends Activity implements IPackageNotification 
                     preparedWrite, responseNeeded, offset, valueStr));
             mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value);// 响应客户端
             logTv("客户端写入Descriptor[" + descriptor.getUuid() + "]:\n" + valueStr);
-
-            //为了调试Commissioningg App 这里就不发了
-//            // 简单模拟通知客户端Characteristic变化
-//            if (Arrays.toString(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE).equals(valueStr)) { //是否开启通知
-//                final BluetoothGattCharacteristic characteristic = descriptor.getCharacteristic();
-//                new Thread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        for (int i = 0; i < 5; i++) {
-//                            SystemClock.sleep(3000);
-//                            String response = "CHAR_" + (int) (Math.random() * 100); //模拟数据
-//                            characteristic.setValue(response);
-//                            mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
-//                            logTv("通知客户端改变Characteristic[" + characteristic.getUuid() + "]:\n" + response);
-//                        }
-//                    }
-//                }).start();
-//            }
         }
 
         @Override
@@ -241,6 +195,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         AdvertiseData advertiseData = new AdvertiseData.Builder()
                 .setIncludeDeviceName(true) //包含蓝牙名称
                 .setIncludeTxPowerLevel(true) //包含发射功率级别
+                //TODO:广播数据
                 .addManufacturerData(1, new byte[]{23, 33}) //设备厂商数据，自定义
                 .build();
         //扫描响应数据(可选，当客户端扫描时才发送)
@@ -256,10 +211,10 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         // =============F服务端=====================================================================================
         BluetoothGattService service = new BluetoothGattService(UUID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
         //添加可读+通知characteristic
-        BluetoothGattCharacteristic characteristicRead = new BluetoothGattCharacteristic(UUID_CHAR_READ_NOTIFY,
-                BluetoothGattCharacteristic.PROPERTY_WRITE|BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_READ);
-        characteristicRead.addDescriptor(new BluetoothGattDescriptor(UUID_DESC_NOTITY, BluetoothGattCharacteristic.PERMISSION_WRITE));
-        service.addCharacteristic(characteristicRead);
+//        BluetoothGattCharacteristic characteristicRead = new BluetoothGattCharacteristic(UUID_CHAR_READ_NOTIFY,
+//                BluetoothGattCharacteristic.PROPERTY_WRITE|BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_READ);
+//        characteristicRead.addDescriptor(new BluetoothGattDescriptor(UUID_DESC_NOTITY, BluetoothGattCharacteristic.PERMISSION_WRITE));
+//        service.addCharacteristic(characteristicRead);
 
         //添加可写+通知characteristic
         BluetoothGattCharacteristic characteristicWrite = new BluetoothGattCharacteristic(UUID_CHAR_WRITE_NOTIFY,
@@ -298,9 +253,12 @@ public class BleServerActivity extends Activity implements IPackageNotification 
 
     @Override
     public void receiveLastPackage() {
+    }
 
+    private byte[] generateManufacturerData(){
 
+        byte[] bytes = new byte[7];
 
-
+        return bytes;
     }
 }
