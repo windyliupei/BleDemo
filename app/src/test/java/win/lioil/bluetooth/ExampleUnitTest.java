@@ -61,93 +61,14 @@ public class ExampleUnitTest {
         String finalJson2 = MergePackage.getInstance().exportToJson();
         assertEquals(json2, finalJson2);
 
-//        //有效payload 18个一组
-//        ByteBuffer buffer = ByteBuffer.allocate(18);
-//
-//
-//        ArrayList<byte[]> result = new ArrayList<>();
-//        //Queue 在 poll()后的size会改变，所以创建一个变量去记录它
-//        int packageCount = bytes.size();
-//        if (packageCount>1){
-//            for (int index = 0;index<packageCount;index++){
-//
-//                byte[] peekByte = bytes.poll();
-//
-//                //去掉前两位
-//                for (int i = 2; i < peekByte.length; i++) {
-//                    if (peekByte[i] != 0x00) {
-//                        buffer.put(peekByte[i]);
-//                    }
-//                }
-//
-//                byte[] validByte = new byte[buffer.position()];
-//                //转入读取模式
-//                buffer.flip();
-//                buffer.get(validByte);
-//
-//                result.add(validByte);
-//                //转入写入模式
-//                buffer.compact();
-//
-//            }
-//        }
 
-
-        //验证
-//        String str1 = new String(result.get(0));
-//        String str2 = new String(result.get(1));
-
-//        assertEquals(str1+str2, json);
     }
 
     //每个JSON分包儿后大于10
     @Test
     public void receive2Package() {
 
-        //组织测试数据1
-        String json = "{\\" +
-                "    \"employees\": [\\" +
-                "        {\\" +
-                "            \"firstName\": \"Bill\",\\" +
-                "            \"lastName\": \"Gates\"\\" +
-                "        },\\" +
-                "        {\\" +
-                "            \"firstName\": \"George\",\\" +
-                "            \"lastName\": \"Bush\"\\" +
-                "        },\\" +
-                "        {\\" +
-                "            \"firstName\": \"Thomas\",\\" +
-                "            \"lastName\": \"Carter\"\\" +
-                "        },\\" +
-                "        {\\" +
-                "            \"firstName\": \"Bill\",\\" +
-                "            \"lastName\": \"Gates\"\\" +
-                "        },\\" +
-                "        {\\" +
-                "            \"firstName\": \"George\",\\" +
-                "            \"lastName\": \"Bush\"\\" +
-                "        },\\" +
-                "        {\\" +
-                "            \"firstName\": \"Thomas\",\\" +
-                "            \"lastName\": \"Carter\"\\" +
-                "        }\\" +
-                "    ]\\" +
-                "}";
 
-        json = json.trim().replace(" ","");
-        json = json.trim().replace("\\","");
-        Queue<byte[]> bytes = SplitPackage.splitByte(json.getBytes());
-
-        int packageCount = bytes.size();
-        if (packageCount>1){
-            for (int index = 0;index<packageCount;index++){
-                byte[] peekByte = bytes.poll();
-                MergePackage.getInstance().appendPackage(peekByte);
-            }
-        }
-
-        String finalJson = MergePackage.getInstance().exportToJson();
-        assertEquals(finalJson, json);
 
         //组织测试数据2，大于15个包儿了，出错了
         String json2 = "{\n" +
