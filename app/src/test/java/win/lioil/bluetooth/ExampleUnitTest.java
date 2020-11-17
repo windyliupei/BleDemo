@@ -150,37 +150,70 @@ public class ExampleUnitTest {
         assertEquals(finalJson, json);
 
         //组织测试数据2，大于15个包儿了，出错了
-        String json2 = "{\\" +
-                "    \"employees2\": [\\" +
-                "        {\\" +
-                "            \"skn\": \"123456789012345678901234\",\\" +
-                "            \"lastName\": \"Gates\"\\" +
-                "        },\\" +
-                "        {\\" +
-                "            \"firstName\": \"123456789012345678901234\",\\" +
-                "            \"lastName\": \"Bush\"\\" +
-                "        },\\" +
-                "        {\\" +
-                "            \"firstName\": \"123456789012345678901234\",\\" +
-                "            \"lastName\": \"Carter\"\\" +
-                "        },\\" +
-                "        {\\" +
-                "            \"firstName\": \"123456789012345678901234\",\\" +
-                "            \"lastName\": \"Gates\"\\" +
-                "        },\\" +
-                "        {\\" +
-                "            \"firstName\": \"123456789012345678901234\",\\" +
-                "            \"lastName\": \"Bush\"\\" +
-                "        },\\" +
-                "        {\\" +
-                "            \"firstName\": \"123456789012345678901234\",\\" +
-                "            \"lastName\": \"123456789012345678901234\"\\" +
-                "        }\\" +
-                "    ]\\" +
+        String json2 = "{\n" +
+                "    \"m\": [\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"Gates\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"Bush\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"Carter\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"Gates\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"Bush\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"123456789012345678901234\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"123456789012345678901234\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"123456789012345678901234\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"123456789012345678901234\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"123456789012345678901234\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"123456789012345678901234\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"123456789012345678901234\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"123456789012345678901234\"\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"firstName\": \"123456789012345678901234\",\n" +
+                "            \"lastName\": \"123456789012345678901234\"\n" +
+                "        }\n" +
+                "    ]\n" +
                 "}";
 
         json2 = json2.trim().replace(" ","");
         json2 = json2.trim().replace("\\","");
+        json2 = json2.trim().replace("\n","");
         Queue<byte[]> bytes2 = SplitPackage.splitByte(json2.getBytes());
 
         int packageCount2 = bytes2.size();
@@ -192,7 +225,7 @@ public class ExampleUnitTest {
         }
 
         String finalJson2 = MergePackage.getInstance().exportToJson();
-        assertNotEquals(json2, finalJson2);
+        assertEquals(json2, finalJson2);
 
     }
 
