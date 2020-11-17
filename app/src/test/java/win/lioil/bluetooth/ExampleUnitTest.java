@@ -2,10 +2,9 @@ package win.lioil.bluetooth;
 
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Queue;
+
+import win.lioil.bluetooth.util.Util;
 
 import static org.junit.Assert.*;
 
@@ -207,9 +206,28 @@ public class ExampleUnitTest {
 
     @Test
     public void cal() {
-        SplitPackage.calHead((byte) 0,2,2);
+        SplitPackage.calHead(false,257,198);
     }
 
+    @Test
+    public void LoopCal() {
+
+        boolean packageToggle = false;
+        int pkgToggleCount = 1;
+
+        for (int pkgWholeIndex = 1; pkgWholeIndex <= 257; pkgWholeIndex++) {
+
+            if(pkgToggleCount>=127){
+                packageToggle =!packageToggle;
+                //每127包儿重新计数
+                pkgToggleCount = 0;
+            }
+
+            SplitPackage.calHead(packageToggle,257,pkgWholeIndex);
+
+            pkgToggleCount++;
+        }
+    }
     @Test
     public void packageRevers() {
         String json2 = "{\\" +
@@ -245,4 +263,72 @@ public class ExampleUnitTest {
         json2 = json2.trim().replace("\\","");
         Queue<byte[]> bytes2 = SplitPackage.splitByte(json2.getBytes());
     }
+
+    @Test
+    public void toPackageHead() {
+        PackageHead packageHead = new PackageHead();
+        packageHead.setAckR(true);
+        packageHead.setPackageToggle(true);
+        byte head = Util.getHead(packageHead);
+        byte[] headBytes = {head};
+
+        String hex = Util.bytesToHex(headBytes);
+
+
+    }
+
+    @Test
+    public void toHex() {
+
+        //1111111
+        byte head = (byte) 0xff;
+        PackageHead hex = Util.getPkgInfo(head);
+
+        //01111111
+        head = (byte) 0x7f;
+        hex = Util.getPkgInfo(head);
+
+        //10111111
+        head = (byte) 0xbf;
+        hex = Util.getPkgInfo(head);
+
+        //11011111
+        head = (byte) 0xdf;
+        hex = Util.getPkgInfo(head);
+
+        //11101111
+        head = (byte) 0xef;
+        hex = Util.getPkgInfo(head);
+
+        //11110111
+        head = (byte) 0xf7;
+        hex = Util.getPkgInfo(head);
+
+        //11111011
+        head = (byte) 0xfb;
+        hex = Util.getPkgInfo(head);
+
+        //11111101
+        head = (byte) 0xfd;
+        hex = Util.getPkgInfo(head);
+
+        //11111110
+        head = (byte) 0xfe;
+        hex = Util.getPkgInfo(head);
+    }
+
+    @Test
+    public void getShu(){
+        int[] indexAndCount = Util.getCountAndIndex(257, 127, 1);
+        indexAndCount = Util.getCountAndIndex(257, 127, 12);
+        indexAndCount = Util.getCountAndIndex(257, 127, 127);
+        indexAndCount = Util.getCountAndIndex(257, 127, 130);
+        indexAndCount = Util.getCountAndIndex(257, 127, 128);
+        indexAndCount = Util.getCountAndIndex(257, 127, 254);
+        indexAndCount = Util.getCountAndIndex(257, 127, 255);
+        indexAndCount = Util.getCountAndIndex(257, 127, 256);
+        indexAndCount = Util.getCountAndIndex(257, 127, 257);
+    }
+
+
 }

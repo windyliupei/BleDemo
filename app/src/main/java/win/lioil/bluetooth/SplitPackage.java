@@ -1,7 +1,5 @@
 package win.lioil.bluetooth;
 
-import android.util.Log;
-
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -9,46 +7,41 @@ import win.lioil.bluetooth.util.Util;
 
 public class SplitPackage {
 
-    public static final int packageSize = 18;
-    private static byte[] headByte = new byte[2];
-    //目前支持15个包儿一组
-    private static final int packageCount = 15;
+    //每个小包二的 payload
+    public static final int packageSize = 17;
+    //头包变成了3个
+    private static byte[] headByte = new byte[3];
+    //目前支持127个包儿一组
+    private static final int packageCount = 127;
 
 
 
 
     public static Queue<byte[]> splitByte(byte[] wholeData) {
-        if (packageSize > 18) {
-            Log.e("BL","Be careful: split count beyond 18!!");
-        }
+
         Queue<byte[]> byteQueue = new LinkedList<>();
-        int pkgCount;
+        int pkgWholeCount;
         if (wholeData.length % packageSize == 0) {
-            pkgCount = wholeData.length / packageSize;
+            pkgWholeCount = wholeData.length / packageSize;
         } else {
-            pkgCount = Math.round((wholeData.length / packageSize) + 1);
+            pkgWholeCount = Math.round((wholeData.length / packageSize) + 1);
         }
 
-        byte packageToggle = 0x00;
+        boolean packageToggle = false;
         int pkgToggleCount = 1;
 
         int headLength = headByte.length;
 
-        if (pkgCount > 0) {
-            for (int pkgIndex = 1; pkgIndex <= pkgCount; pkgIndex++) {
+        if (pkgWholeCount > 0) {
+            for (int pkgWholeIndex = 1; pkgWholeIndex <= pkgWholeCount; pkgWholeIndex++) {
 
-                //TODO:
                 if(pkgToggleCount>=packageCount){
-                    if(packageToggle==0x00){
-                        packageToggle = 0x04;
-                    }else{
-                        packageToggle = 0x00;
-                    }
-                    //每15包儿重新计数
+                    packageToggle =!packageToggle;
+                    //每127包儿重新计数
                     pkgToggleCount = 0;
                 }
 
-                calHead(packageToggle,pkgCount, pkgIndex);
+                calHead(packageToggle,pkgWholeCount, pkgWholeIndex);
 
                 pkgToggleCount++;
 
@@ -56,18 +49,18 @@ public class SplitPackage {
                 int lastPkgLength;
 
                 //只有一包儿或最后一包的处理
-                if (pkgCount == 1 || pkgIndex == pkgCount) {
+                if (pkgWholeCount == 1 || pkgWholeIndex == pkgWholeCount) {
 
                     //包儿的长度
                     lastPkgLength = wholeData.length % packageSize == 0 ? packageSize : wholeData.length % packageSize;
                     dataPkg = new byte[lastPkgLength+headLength];
                     System.arraycopy(headByte, 0, dataPkg, 0, headByte.length);
-                    System.arraycopy(wholeData, (pkgIndex-1) * packageSize, dataPkg, headByte.length, lastPkgLength);
+                    System.arraycopy(wholeData, (pkgWholeIndex-1) * packageSize, dataPkg, headByte.length, lastPkgLength);
                 } else {
 
                     dataPkg = new byte[packageSize+headLength];
                     System.arraycopy(headByte, 0, dataPkg, 0, headByte.length);
-                    System.arraycopy(wholeData, (pkgIndex-1) * packageSize, dataPkg, headByte.length, packageSize);
+                    System.arraycopy(wholeData, (pkgWholeIndex-1) * packageSize, dataPkg, headByte.length, packageSize);
                 }
                 byteQueue.offer(dataPkg);
             }
@@ -76,43 +69,53 @@ public class SplitPackage {
         return byteQueue;
     }
 
-    //packageToggle : when this package set 0, next package is set 1. Inversely, this package set 1, next set 0
-    public static void calHead(byte packageToggle, int pkgCount, int pkgIndex) {
 
-        //算第一位
+    public static void calHead(boolean packageToggle, int pkgWholeCount, int pkgWholeIndex) {
+        PackageHead packageHead = new PackageHead();
+        //127包儿内的index
+        int pkgIndex;
+        //127包儿内的count
+        int eachPackageCount;
+        int[] countAndIndex = Util.getCountAndIndex(pkgWholeCount, packageCount, pkgWholeIndex);
+        eachPackageCount = countAndIndex[0];
+        pkgIndex = countAndIndex[1];
 
         //ACK required = 1, ACK not required = 0
-        byte ackR = 1;
+        //一般会在第127包需要给设备端发一个ack，以便使设备端检查并返回丢失的包儿
+        //这个ack是“要求设备ack”
+        packageHead.setAckR(eachPackageCount==pkgIndex);
 
+        //packageToggle : when this package set 0, next package is set 1. Inversely, this package set 1, next set 0
+        //包儿的 toggle 0，1 交替
+        packageHead.setPackageToggle(packageToggle);
+
+        //每127包儿要发一个“中包儿”的标记位
         //1: this is Finish frame, not have next frame, need ack, 0: have next frame
-        byte fragmentation = 0;
+        packageHead.setFragmentation(eachPackageCount==pkgIndex);
+
+        //不是加密包儿
+        packageHead.setEncP(false);
+
+        //是否“业务包”的最后一包儿
+        packageHead.setLastPackage(pkgWholeCount==pkgWholeIndex);
 
         //message type (data, ACK)
         //0x00 – data fragmentation
-        //0x01 – acknowledge for received message (ACK)
-        byte type = 0x00;
+        //0x01 – acknowledge for received message (ACK)，这个ack是“响应设备ack”
+        //数据包儿不需要相应ack
+        packageHead.setMsgType(false);
+        headByte[0] = Util.getHead(packageHead);
 
-        //最后一包儿
-        if (pkgIndex == pkgCount){
-            ackR = 0x08;
-            fragmentation = 0x02;
-        }else{
-            ackR = 0;
-            fragmentation = 0;
-        }
-        String first = Integer.toHexString(ackR | packageToggle | fragmentation | type);
-        //实际上不会大于2
-        if (first.length()<2){
-            first+="0";//补个0
-        }
-        headByte[0] = Util.hexToBytes(first)[0];
-
-        //算第二位
-        String hex= Integer.toHexString(pkgCount*16+pkgIndex);
-        byte[] hexBytes = Util.hexToBytes(hex);
+        //算第二位,包儿的count （1~127）
+        String countHex= Integer.toHexString(eachPackageCount);
+        byte[] hexBytes = Util.hexToBytes(countHex);
         headByte[1] = hexBytes[0];
 
+        //算第三位,包儿的index （1~127）
+        String indexHex= Integer.toHexString(pkgIndex);
+        headByte[2] = Util.hexToBytes(indexHex)[0];
 
+        System.out.println(Util.bytesToHex(headByte));
     }
 
 
