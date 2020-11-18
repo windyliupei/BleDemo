@@ -155,6 +155,11 @@ public class BleServerActivity extends Activity implements IPackageNotification 
                 characteristic.setValue(ackRsp);
                 mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
             }
+
+            //是个ack 的回复包儿，需要重发丢失的包儿
+            if(Util.getPkgInfo(requestBytes[0]).isMsgType()){
+                 //这里处理丢包儿，把丢的包儿给Client再发回去
+            }
         }
 
         @Override

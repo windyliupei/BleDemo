@@ -108,7 +108,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
             byte[] msg = characteristic.getValue();
             String valueStr = new String();
             Log.i(TAG, String.format("onCharacteristicChanged:%s,%s,%s,%s", gatt.getDevice().getName(), gatt.getDevice().getAddress(), uuid, valueStr));
-            //logTv("通知Characteristic[" + uuid + "]:\n" + valueStr);
+            //logTv("通知Characteristic[" + uuid + "]:\n" + Util.bytesToHex(msg));
 
             MergePackage.getInstance().appendPackage(msg);
 
@@ -121,8 +121,13 @@ public class BleClientActivity extends Activity implements IPackageNotification 
             }
 
             //是个ack包儿，需要回收到了哪些包儿，没收到哪些包儿
-            if(Util.getPkgInfo(msg[0]).isAckR()){
+            if(Util.getPkgInfo(msg[0]).isMsgType()){
+                logTv("收到Ack Package");
                 writeSinglePackage(Util.getAckRsp(packageToggle));
+            }
+            //是个ack的回复包儿，需要重发丢失的包儿
+            if(Util.getPkgInfo(msg[0]).isMsgType()){
+                //这里处理丢包儿，把丢的包儿给Client再发回去
             }
         }
 
@@ -219,15 +224,23 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 //            characteristic.setValue(text.getBytes()); //单次最多20个字节
 //            mBluetoothGatt.writeCharacteristic(characteristic);
 
+            final String input = mWriteET.getText().toString();
             String text = mWriteET.getText().toString();
 
             //目前有2种Client的输入：
             //1。模拟App，这里输入的是 01，02，03。。。。99
             //2。Commission App 输入的{"test":"01"} 这样的
 
+            //m1: 02 7e ba de 00
+            final byte[] m1Bbytes = {0x02, 0x7e, (byte) 0xba, (byte) 0xde, 0x00};
+
+
             if(Integer.valueOf(text)>=0){
                 //输入的数字，这个时候拼接成，{"test":"01"} 这样的
+
                 text = String.format("{\"test\":\"%s\"}",text);
+
+
             }else{
                 //拼一个2可以内的json
                 text = "{\n" +
@@ -299,11 +312,18 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 if(mockReqBytes!=null){
 
                     final int packageCount = mockReqBytes.size();
+
+                    final String finalText = text;
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
                             for (int index = 0;index<packageCount;index++){
+
                                 byte[] peekByte = mockReqBytes.poll();
+                                if(Integer.valueOf(input)==99){
+                                    Queue<byte[]> splitByte = SplitPackage.splitByte(m1Bbytes);
+                                    peekByte = splitByte.poll();
+                                }
 
                                 characteristic.setValue(peekByte);
                                 packageToggle = Util.getPkgInfo(peekByte[0]).isPackageToggle();
@@ -390,5 +410,6 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
         characteristic.setValue(singleByte);
         mBluetoothGatt.writeCharacteristic(characteristic);
+        logTv("发送 Ack Package:"+Util.bytesToHex(singleByte));
     }
 }
