@@ -28,6 +28,7 @@ import win.lioil.bluetooth.MockRequestPackages;
 import win.lioil.bluetooth.MockResponsePackages;
 import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
+import win.lioil.bluetooth.SplitPackage;
 import win.lioil.bluetooth.util.Util;
 
 import static win.lioil.bluetooth.ble.BleServerActivity.UUID_CHAR_WRITE_NOTIFY;
@@ -120,7 +121,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
             }
 
             //是个ack包儿，需要回收到了哪些包儿，没收到哪些包儿
-            if(Util.getPkgInfo(msg[0]).isMsgType()){
+            if(Util.getPkgInfo(msg[0]).isAckR()){
                 writeSinglePackage(Util.getAckRsp(packageToggle));
             }
         }
@@ -220,9 +221,81 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
             String text = mWriteET.getText().toString();
 
+            //目前有2种Client的输入：
+            //1。模拟App，这里输入的是 01，02，03。。。。99
+            //2。Commission App 输入的{"test":"01"} 这样的
+
+            if(Integer.valueOf(text)>=0){
+                //输入的数字，这个时候拼接成，{"test":"01"} 这样的
+                text = String.format("{\"test\":\"%s\"}",text);
+            }else{
+                //拼一个2可以内的json
+                text = "{\n" +
+                        "    \"m\": [\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"Gates\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"Bush\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"Carter\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"Gates\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"Bush\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"123456789012345678901234\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"123456789012345678901234\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"123456789012345678901234\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"123456789012345678901234\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"123456789012345678901234\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"123456789012345678901234\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"123456789012345678901234\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"123456789012345678901234\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "            \"firstName\": \"123456789012345678901234\",\n" +
+                        "            \"lastName\": \"123456789012345678901234\"\n" +
+                        "        }\n" +
+                        "    ]\n" +
+                        "}";
+            }
+
             try {
-                //根据Client端输入模拟数据：客户端输入，01，02，03这类的即可
-                final Queue<byte[]> mockReqBytes = MockRequestPackages.getMockReqBytes(text.getBytes());
+
+                //final Queue<byte[]> mockReqBytes = MockRequestPackages.getMockReqBytes(text.getBytes());
+                final Queue<byte[]> mockReqBytes = SplitPackage.splitByte(text.getBytes());
                 if(mockReqBytes!=null){
 
                     final int packageCount = mockReqBytes.size();
@@ -231,11 +304,13 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                         public void run() {
                             for (int index = 0;index<packageCount;index++){
                                 byte[] peekByte = mockReqBytes.poll();
+
                                 characteristic.setValue(peekByte);
                                 packageToggle = Util.getPkgInfo(peekByte[0]).isPackageToggle();
                                 mBluetoothGatt.writeCharacteristic(characteristic);
                                 logTv("写入服务端分包儿:"+(index+1)+"/"+packageCount);
                                 logTv("分包儿内容:"+new String(peekByte));
+
                                 SystemClock.sleep(1000);
                             }
                         }

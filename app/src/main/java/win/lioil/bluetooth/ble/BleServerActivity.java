@@ -51,6 +51,8 @@ public class BleServerActivity extends Activity implements IPackageNotification 
     private BluetoothLeAdvertiser mBluetoothLeAdvertiser; // BLE广播
     private BluetoothGattServer mBluetoothGattServer; // BLE服务端
 
+    private boolean packageToggle;
+
     // BLE广播Callback
     private AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
         @Override
@@ -112,6 +114,8 @@ public class BleServerActivity extends Activity implements IPackageNotification 
 
             MergePackage.getInstance().appendPackage(requestBytes);
 
+
+
             if(MergePackage.getInstance().isReceiveLastPackage()){
                 //最后一包儿后，发送 response
                 String clientWholeJson = MergePackage.getInstance().exportToJson();
@@ -129,9 +133,12 @@ public class BleServerActivity extends Activity implements IPackageNotification 
                                     byte[] peekByte = mockRspBytes.poll();
                                     characteristic.setValue(peekByte);
                                     mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
+                                    packageToggle = Util.getPkgInfo(peekByte[0]).isPackageToggle();
                                     SystemClock.sleep(1000);
-                                    logTv("回写 客户端Characteristic[" + characteristic.getUuid() + "]:\n" + new String(peekByte));
-                                    logTv("回写 客户端Characteristic[" + characteristic.getUuid() + "]:\n" + Util.bytesToHex(peekByte));
+                                    logTv("回写 客户端 String:Characteristic[" + characteristic.getUuid() + "]:\n" + new String(peekByte));
+
+                                    logTv("回写 客户端 Hex   :Characteristic[" + characteristic.getUuid() + "]:\n" + Util.bytesToHex(peekByte));
+                                    Log.i(TAG,"Hex:"+Util.bytesToHex(peekByte));
                                  }
                             }
                         }).start();
@@ -140,6 +147,13 @@ public class BleServerActivity extends Activity implements IPackageNotification 
                 }catch (Exception e){
                     logTv("Error！");
                 }
+            }
+
+            //是个ack包儿，需要回收到了哪些包儿，没收到哪些包儿
+            if(Util.getPkgInfo(requestBytes[0]).isAckR()){
+                byte[] ackRsp = Util.getAckRsp(packageToggle);
+                characteristic.setValue(ackRsp);
+                mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
             }
         }
 

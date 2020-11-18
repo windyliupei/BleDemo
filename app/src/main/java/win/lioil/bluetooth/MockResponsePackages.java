@@ -45,6 +45,7 @@ public class MockResponsePackages {
 
         try {
             String rspHttp = call.execute().body().string();
+            rspHttp = rspHttp.replace(" ","");
             return SplitPackage.splitByte(rspHttp.getBytes());
         } catch (IOException e) {
             Log.e("Http",e.getMessage());
