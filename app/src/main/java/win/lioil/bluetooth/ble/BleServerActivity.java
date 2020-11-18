@@ -198,11 +198,11 @@ public class BleServerActivity extends Activity implements IPackageNotification 
                 .setIncludeDeviceName(true) //包含蓝牙名称
                 .setIncludeTxPowerLevel(true) //包含发射功率级别
                 //TODO:广播数据
-                .addManufacturerData(1, manufacturerData) //设备厂商数据，自定义
+                .addManufacturerData(0x0526, manufacturerData) //设备厂商数据，自定义
                 .build();
         //扫描响应数据(可选，当客户端扫描时才发送)
         AdvertiseData scanResponse = new AdvertiseData.Builder()
-                .addManufacturerData(2, new byte[]{66, 66}) //设备厂商数据，自定义
+                .addManufacturerData(0x0526, new byte[]{66, 66}) //设备厂商数据，自定义
                 .addServiceUuid(new ParcelUuid(UUID_SERVICE)) //服务UUID
 //                .addServiceData(new ParcelUuid(UUID_SERVICE), new byte[]{2}) //服务数据，自定义
                 .build();
@@ -282,6 +282,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
 
 
         byte[] bytes = Util.hexToBytes(mac+typeOnline);
+        logTv("广播信息："+Util.bytesToHex(bytes));
 
         return bytes;
     }
