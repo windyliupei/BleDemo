@@ -284,10 +284,10 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         if (online==0 && hubOrSocket==0){
             //Socket 离线
             typeOnline = "00";
-        }else if(online==0 && hubOrSocket==1){
+        }else if(online==1 && hubOrSocket==0){
             //Socket 在线
             typeOnline = "01";
-        }else if(online==1 && hubOrSocket==0){
+        }else if(online==0 && hubOrSocket==1){
             //HUB 离线
             typeOnline = "02";
         }else{
