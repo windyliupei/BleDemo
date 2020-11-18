@@ -45,6 +45,8 @@ public class BleClientActivity extends Activity implements IPackageNotification 
     private BluetoothGatt mBluetoothGatt;
     private boolean isConnected = false;
 
+    private boolean packageToggle;
+
     // 与服务端连接的Callback
     public BluetoothGattCallback mBluetoothGattCallback = new BluetoothGattCallback() {
 
@@ -102,11 +104,12 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             UUID uuid = characteristic.getUuid();
-            String valueStr = new String(characteristic.getValue());
+            byte[] msg = characteristic.getValue();
+            String valueStr = new String();
             Log.i(TAG, String.format("onCharacteristicChanged:%s,%s,%s,%s", gatt.getDevice().getName(), gatt.getDevice().getAddress(), uuid, valueStr));
             //logTv("通知Characteristic[" + uuid + "]:\n" + valueStr);
 
-            MergePackage.getInstance().appendPackage(characteristic.getValue());
+            MergePackage.getInstance().appendPackage(msg);
 
             if(MergePackage.getInstance().isReceiveLastPackage()){
                 //Client 最后一包儿后，把Log打出来
@@ -114,6 +117,11 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 logTv("收到所有Server的Rsp JSON");
                 logTv(rspWholeJson);
 
+            }
+
+            //是个ack包儿，需要回收到了哪些包儿，没收到哪些包儿
+            if(Util.getPkgInfo(msg[0]).isMsgType()){
+                writeSinglePackage(Util.getAckRsp(packageToggle));
             }
         }
 
@@ -224,6 +232,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                             for (int index = 0;index<packageCount;index++){
                                 byte[] peekByte = mockReqBytes.poll();
                                 characteristic.setValue(peekByte);
+                                packageToggle = Util.getPkgInfo(peekByte[0]).isPackageToggle();
                                 mBluetoothGatt.writeCharacteristic(characteristic);
                                 logTv("写入服务端分包儿:"+(index+1)+"/"+packageCount);
                                 logTv("分包儿内容:"+new String(peekByte));
@@ -298,5 +307,13 @@ public class BleClientActivity extends Activity implements IPackageNotification 
     @Override
     public void receiveLastPackage() {
 
+    }
+
+    private void writeSinglePackage(byte[] singleByte){
+        BluetoothGattService service = getGattService(UUID_SERVICE);
+        BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可写的Characteristic
+
+        characteristic.setValue(singleByte);
+        mBluetoothGatt.writeCharacteristic(characteristic);
     }
 }

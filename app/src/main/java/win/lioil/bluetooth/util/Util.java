@@ -123,4 +123,33 @@ public class Util {
 
         return result;
     }
+
+    //TODO:
+    public static byte[] getAckRsp(boolean packageToggle){
+
+        PackageHead head = new PackageHead();
+        head.setAckR(false);
+        head.setPackageToggle(packageToggle);
+        head.setFragmentation(true);
+        head.setEncP(false);
+        head.setLastPackage(true);
+        head.setReserve1(false);
+        head.setReserve2(false);
+        head.setMsgType(true);
+
+        byte[] ackRsp = new byte[20];
+        ackRsp[0] = Util.getHead(head);
+
+        ackRsp[1] = 0x01;
+        ackRsp[2] = 0x01;
+        ackRsp[3] = 0x00;
+
+        for (int index = 4;index<20;index++){
+            ackRsp[index] = 0x00;
+        }
+
+
+
+        return ackRsp;
+    }
 }

@@ -108,6 +108,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
             logTv("收到 客户端写入 Characteristic[" + characteristic.getUuid() + "]:\n" + Util.bytesToHex(requestBytes));
             mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, requestBytes);// 响应客户端
 
+            //TODO：分析是否收到ACK 包儿
 
             MergePackage.getInstance().appendPackage(requestBytes);
 
