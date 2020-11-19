@@ -110,10 +110,13 @@ public class BleServerActivity extends Activity implements IPackageNotification 
             logTv("收到 客户端写入 Characteristic[" + characteristic.getUuid() + "]:\n" + Util.bytesToHex(requestBytes));
             mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, requestBytes);// 响应客户端
 
-            //TODO：分析是否收到ACK 包儿
 
-            MergePackage.getInstance().appendPackage(requestBytes);
-
+            //是个ack 的回复包儿，需要重发丢失的包儿
+            if(Util.getPkgInfo(requestBytes[0]).isMsgType()){
+                //这里处理丢包儿，把丢的包儿给Client再发回去
+            }else{
+                MergePackage.getInstance().appendPackage(requestBytes);
+            }
 
 
             if(MergePackage.getInstance().isReceiveLastPackage()){
@@ -156,10 +159,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
                 mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
             }
 
-            //是个ack 的回复包儿，需要重发丢失的包儿
-            if(Util.getPkgInfo(requestBytes[0]).isMsgType()){
-                 //这里处理丢包儿，把丢的包儿给Client再发回去
-            }
+
         }
 
         @Override

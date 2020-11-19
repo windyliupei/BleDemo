@@ -110,7 +110,13 @@ public class BleClientActivity extends Activity implements IPackageNotification 
             Log.i(TAG, String.format("onCharacteristicChanged:%s,%s,%s,%s", gatt.getDevice().getName(), gatt.getDevice().getAddress(), uuid, valueStr));
             //logTv("通知Characteristic[" + uuid + "]:\n" + Util.bytesToHex(msg));
 
-            MergePackage.getInstance().appendPackage(msg);
+            //是个ack的回复包儿，需要重发丢失的包儿
+            if(Util.getPkgInfo(msg[0]).isMsgType()){
+                //这里处理丢包儿，把丢的包儿给Client再发回去
+            }else{
+                MergePackage.getInstance().appendPackage(msg);
+            }
+
 
             if(MergePackage.getInstance().isReceiveLastPackage()){
                 //Client 最后一包儿后，把Log打出来
@@ -125,10 +131,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 logTv("收到Ack Package");
                 writeSinglePackage(Util.getAckRsp(packageToggle));
             }
-            //是个ack的回复包儿，需要重发丢失的包儿
-            if(Util.getPkgInfo(msg[0]).isMsgType()){
-                //这里处理丢包儿，把丢的包儿给Client再发回去
-            }
+
         }
 
         @Override
