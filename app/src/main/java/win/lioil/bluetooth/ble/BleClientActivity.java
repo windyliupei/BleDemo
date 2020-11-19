@@ -81,7 +81,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                     }
                     allUUIDs.append("}");
                     Log.i(TAG, "onServicesDiscovered:" + allUUIDs.toString());
-                    logTv("发现服务" + allUUIDs);
+                    //logTv("发现服务" + allUUIDs);
                 }
             }
         }
@@ -106,8 +106,8 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             UUID uuid = characteristic.getUuid();
             byte[] msg = characteristic.getValue();
-            String valueStr = new String();
-            Log.i(TAG, String.format("onCharacteristicChanged:%s,%s,%s,%s", gatt.getDevice().getName(), gatt.getDevice().getAddress(), uuid, valueStr));
+            //String valueStr = new String();
+            //Log.i(TAG, String.format("onCharacteristicChanged:%s,%s,%s,%s", gatt.getDevice().getName(), gatt.getDevice().getAddress(), uuid, valueStr));
             //logTv("通知Characteristic[" + uuid + "]:\n" + Util.bytesToHex(msg));
 
             //是个ack的回复包儿，需要重发丢失的包儿
@@ -222,10 +222,6 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         final BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可写的Characteristic
 
         if (service != null) {
-//            String text = mWriteET.getText().toString();
-//            BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_WRITE);//通过UUID获取可写的Characteristic
-//            characteristic.setValue(text.getBytes()); //单次最多20个字节
-//            mBluetoothGatt.writeCharacteristic(characteristic);
 
             final String input = mWriteET.getText().toString();
             String text = mWriteET.getText().toString();
@@ -246,66 +242,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
             }else{
                 //拼一个2可以内的json
-                text = "{\n" +
-                        "    \"m\": [\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"Gates\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"Bush\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"Carter\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"Gates\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"Bush\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"123456789012345678901234\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"123456789012345678901234\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"123456789012345678901234\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"123456789012345678901234\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"123456789012345678901234\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"123456789012345678901234\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"123456789012345678901234\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"123456789012345678901234\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "            \"firstName\": \"123456789012345678901234\",\n" +
-                        "            \"lastName\": \"123456789012345678901234\"\n" +
-                        "        }\n" +
-                        "    ]\n" +
-                        "}";
+                text =  MockRequestPackages.generateBigData();
             }
 
             try {
@@ -339,41 +276,25 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                         }
                     }).start();
                 }
-
             }catch (Exception e){
                 logTv("写入服务端错误！");
             }
         }
-
-
-
-
     }
 
     // 设置通知Characteristic变化会回调->onCharacteristicChanged()
     public void setNotify(View view) {
         BluetoothGattService service = getGattService(UUID_SERVICE);
         if (service != null) {
-            // 设置Characteristic通知
-//            BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_READ_NOTIFY);//通过UUID获取可通知的Characteristic
-//            mBluetoothGatt.setCharacteristicNotification(characteristic, true);
 
             // 设置Characteristic通知
             BluetoothGattCharacteristic w_characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可通知的Characteristic
             mBluetoothGatt.setCharacteristicNotification(w_characteristic, true);
 
             // 向Characteristic的Descriptor属性写入通知开关，使蓝牙设备主动向手机发送数据
-//            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID_DESC_NOTITY);
-//            // descriptor.setValue(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);//和通知类似,但服务端不主动发数据,只指示客户端读取数据
-//            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-//            mBluetoothGatt.writeDescriptor(descriptor);
-
-            // 向Characteristic的Descriptor属性写入通知开关，使蓝牙设备主动向手机发送数据
-            //BluetoothGattDescriptor w_descriptor = w_characteristic.getDescriptor(UUID_CHAR_WRITE_NOTIFY);
             BluetoothGattDescriptor w_descriptor = w_characteristic.getDescriptors().get(0);
             w_descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             mBluetoothGatt.writeDescriptor(w_descriptor);
-
         }
     }
 

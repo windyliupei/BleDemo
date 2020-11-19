@@ -15,6 +15,10 @@
     <!--访问RESTFul 读取Mock 的 JSON-->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--访问MACID-->
+
+    <uses-permission android:name="android.permission.LOCAL_MAC_ADDRESS" />
+
     <!-- required = true 表示手机必须支持BLE，否则无法安装运行-->
     <uses-feature
         android:name="android.hardware.bluetooth_le"

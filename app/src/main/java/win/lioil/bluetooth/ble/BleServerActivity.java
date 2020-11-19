@@ -22,7 +22,12 @@ import android.os.SystemClock;
 import android.util.Log;
 import android.widget.TextView;
 
+import net.vidageek.mirror.dsl.Mirror;
+
+import java.net.NetworkInterface;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Queue;
 import java.util.UUID;
 
@@ -38,12 +43,8 @@ import win.lioil.bluetooth.util.Util;
  * BLE服务端(从机/外围设备/peripheral)
  */
 public class BleServerActivity extends Activity implements IPackageNotification {
-    //public static final UUID UUID_SERVICE = UUID.fromString("10000000-0000-0000-0000-000000000000"); //自定义UUID
     public static final UUID UUID_SERVICE = UUID.fromString("0000b304-1212-efde-1523-785feabcd133"); //自定义UUID
     public static final UUID UUID_CHAR_READ_NOTIFY = UUID.fromString("11000000-0000-0000-0000-000000000000");
-    //public static final UUID UUID_DESC_NOTITY = UUID.fromString("11100000-0000-0000-0000-000000000000");
-    //public static final UUID UUID_DESC_NOTITY = UUID.fromString("0000b832-1212-efde-1523-785feabcd133");
-    //public static final UUID UUID_CHAR_WRITE_NOTIFY = UUID.fromString("12000000-0000-0000-0000-000000000000");
     public static final UUID UUID_CHAR_WRITE_NOTIFY = UUID.fromString("0000b831-1212-efde-1523-785feabcd133");
     public static final UUID UUID_DESC_NOTITY = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
     private static final String TAG = BleServerActivity.class.getSimpleName();
@@ -217,12 +218,11 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         AdvertiseData advertiseData = new AdvertiseData.Builder()
                 .setIncludeDeviceName(true) //包含蓝牙名称
                 .setIncludeTxPowerLevel(true) //包含发射功率级别
-                //TODO:广播数据
                 .addManufacturerData(0x0526, manufacturerData) //设备厂商数据，自定义
                 .build();
         //扫描响应数据(可选，当客户端扫描时才发送)
         AdvertiseData scanResponse = new AdvertiseData.Builder()
-                .addManufacturerData(0x0526, new byte[]{66, 66}) //设备厂商数据，自定义
+                .addManufacturerData(0x0526, manufacturerData)//new byte[]{66, 66}) //设备厂商数据，自定义
                 .addServiceUuid(new ParcelUuid(UUID_SERVICE)) //服务UUID
 //                .addServiceData(new ParcelUuid(UUID_SERVICE), new byte[]{2}) //服务数据，自定义
                 .build();
@@ -232,11 +232,6 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         // 注意：必须要开启可连接的BLE广播，其它设备才能发现并连接BLE服务端!
         // =============F服务端=====================================================================================
         BluetoothGattService service = new BluetoothGattService(UUID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
-        //添加可读+通知characteristic
-//        BluetoothGattCharacteristic characteristicRead = new BluetoothGattCharacteristic(UUID_CHAR_READ_NOTIFY,
-//                BluetoothGattCharacteristic.PROPERTY_WRITE|BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_READ);
-//        characteristicRead.addDescriptor(new BluetoothGattDescriptor(UUID_DESC_NOTITY, BluetoothGattCharacteristic.PERMISSION_WRITE));
-//        service.addCharacteristic(characteristicRead);
 
         //添加可写+通知characteristic
         BluetoothGattCharacteristic characteristicWrite = new BluetoothGattCharacteristic(UUID_CHAR_WRITE_NOTIFY,
@@ -282,8 +277,8 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         Intent intent = getIntent();
         int online = intent.getIntExtra("online", 0);
         int hubOrSocket = intent.getIntExtra("hubOrSocket",0);
-        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        String mac = bluetoothAdapter.getAddress();
+
+        String mac = getMacFromHardware();
         mac = mac.replace(":","");
         String typeOnline = "";
         if (online==0 && hubOrSocket==0){
@@ -305,5 +300,32 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         logTv("广播信息："+Util.bytesToHex(bytes));
 
         return bytes;
+    }
+
+    private static String getMacFromHardware() {
+        try {
+            List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface nif : all) {
+                if (!nif.getName().equalsIgnoreCase("wlan0")) continue;
+
+                byte[] macBytes = nif.getHardwareAddress();
+                if (macBytes == null) {
+                    return "";
+                }
+
+                StringBuilder res1 = new StringBuilder();
+                for (byte b : macBytes) {
+                    res1.append(String.format("%02X:", b));
+                }
+
+                if (res1.length() > 0) {
+                    res1.deleteCharAt(res1.length() - 1);
+                }
+                return res1.toString();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "02:00:00:00:00:00";
     }
 }
