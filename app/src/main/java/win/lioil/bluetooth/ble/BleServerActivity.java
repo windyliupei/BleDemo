@@ -120,32 +120,18 @@ public class BleServerActivity extends Activity implements IPackageNotification 
             }
 
 
+            //TODO:这里是不支持多个设备同时接入的
             if(MergePackage.getInstance().isReceiveLastPackage()){
                 //最后一包儿后，发送 response
                 String clientWholeJson = MergePackage.getInstance().exportToJson();
                 logTv("收到所有Client的Req JSON:"+clientWholeJson);
 
                 try {
-                    final Queue<byte[]> mockRspBytes = MockResponsePackages.getMockRspBytes(clientWholeJson);
-                    if(mockRspBytes!=null){
 
-                        final int packageCount = mockRspBytes.size();
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                for (int index = 0;index<packageCount;index++){
-                                    byte[] peekByte = mockRspBytes.poll();
-                                    characteristic.setValue(peekByte);
-                                    mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
-                                    packageToggle = Util.getPkgInfo(peekByte[0]).isPackageToggle();
-                                    SystemClock.sleep(1000);
-                                    logTv("回写 客户端 String:Characteristic[" + characteristic.getUuid() + "]:\n" + new String(peekByte));
-
-                                    logTv("回写 客户端 Hex   :Characteristic[" + characteristic.getUuid() + "]:\n" + Util.bytesToHex(peekByte));
-                                    Log.i(TAG,"Hex:"+Util.bytesToHex(peekByte));
-                                 }
-                            }
-                        }).start();
+                    String mockRspStr = MockResponsePackages.getMockRsp(clientWholeJson);
+                    if(mockRspStr!=null){
+                        BleServerSender sender = new BleServerSender(characteristic,mBluetoothGattServer,device);
+                        sender.sendMessage(mockRspStr);
                     }
 
                 }catch (Exception e){

@@ -18,17 +18,14 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import java.util.Arrays;
-import java.util.Queue;
 import java.util.UUID;
 
 import win.lioil.bluetooth.APP;
 import win.lioil.bluetooth.IPackageNotification;
 import win.lioil.bluetooth.MergePackage;
 import win.lioil.bluetooth.MockRequestPackages;
-import win.lioil.bluetooth.MockResponsePackages;
 import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
-import win.lioil.bluetooth.SplitPackage;
 import win.lioil.bluetooth.util.Util;
 
 import static win.lioil.bluetooth.ble.BleServerActivity.UUID_CHAR_WRITE_NOTIFY;
@@ -51,8 +48,6 @@ public class BleClientActivity extends Activity implements IPackageNotification 
     // 与服务端连接的Callback
     public BluetoothGattCallback mBluetoothGattCallback = new BluetoothGattCallback() {
 
-
-
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             BluetoothDevice dev = gatt.getDevice();
@@ -62,24 +57,13 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 gatt.discoverServices(); //启动服务发现
                 logTv(String.format(status == 0 ? (newState == 2 ? "与[%s]连接成功" : "与[%s]连接断开") : ("与[%s]连接出错,错误码:" + status), dev));
 
-                BluetoothGattService service = new BluetoothGattService(UUID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
-                if (service != null && mBluetoothGatt!=null) {
-
-                    // 设置Characteristic通知
-                    BluetoothGattCharacteristic w_characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可通知的Characteristic
-                    mBluetoothGatt.setCharacteristicNotification(w_characteristic, true);
-
-                    // 向Characteristic的Descriptor属性写入通知开关，使蓝牙设备主动向手机发送数据
-                    BluetoothGattDescriptor w_descriptor = w_characteristic.getDescriptors().get(0);
-                    w_descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                    mBluetoothGatt.writeDescriptor(w_descriptor);
-                }
             } else {
                 isConnected = false;
                 closeConn();
                 logTv(String.format(status == 0 ? (newState == 2 ? "与[%s]连接成功" : "与[%s]连接断开") : ("与[%s]连接出错,错误码:" + status), dev));
 
             }
+
         }
 
         @Override
@@ -96,7 +80,21 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                     }
                     allUUIDs.append("}");
                     Log.i(TAG, "onServicesDiscovered:" + allUUIDs.toString());
-                    //logTv("发现服务" + allUUIDs);
+                }
+
+
+
+                BluetoothGattService service = getGattService(BleServerActivity.UUID_SERVICE);
+                if (service != null) {
+                    // 设置Characteristic通知
+                    BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可通知的Characteristic
+                    mBluetoothGatt.setCharacteristicNotification(characteristic, true);
+
+                    // 向Characteristic的Descriptor属性写入通知开关，使蓝牙设备主动向手机发送数据
+                    BluetoothGattDescriptor descriptor = characteristic.getDescriptor(BleServerActivity.UUID_DESC_NOTITY);
+                    // descriptor.setValue(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);//和通知类似,但服务端不主动发数据,只指示客户端读取数据
+                    descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                    mBluetoothGatt.writeDescriptor(descriptor);
                 }
             }
         }
@@ -119,11 +117,8 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            UUID uuid = characteristic.getUuid();
+
             byte[] msg = characteristic.getValue();
-            //String valueStr = new String();
-            //Log.i(TAG, String.format("onCharacteristicChanged:%s,%s,%s,%s", gatt.getDevice().getName(), gatt.getDevice().getAddress(), uuid, valueStr));
-            //logTv("通知Characteristic[" + uuid + "]:\n" + Util.bytesToHex(msg));
 
             //是个ack的回复包儿，需要重发丢失的包儿
             if(Util.getPkgInfo(msg[0]).isMsgType()){
@@ -142,7 +137,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
             }
 
             //是个ack包儿，需要回收到了哪些包儿，没收到哪些包儿
-            if(Util.getPkgInfo(msg[0]).isMsgType()){
+            if(Util.getPkgInfo(msg[0]).isAckR()){
                 logTv("收到Ack Package");
                 writeSinglePackage(Util.getAckRsp(packageToggle));
             }
@@ -194,10 +189,6 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 BluetoothGattCharacteristic.PROPERTY_WRITE|BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE);
         characteristicWrite.addDescriptor(new BluetoothGattDescriptor(UUID_CHAR_WRITE_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE));
         service.addCharacteristic(characteristicWrite);
-
-
-
-
     }
 
     @Override
@@ -228,40 +219,38 @@ public class BleClientActivity extends Activity implements IPackageNotification 
     public void write(View view) {
         BluetoothGattService service = getGattService(UUID_SERVICE);
 
+
         if (service != null && isConnected) {
-
-            final BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可写的Characteristic
-            String text = mWriteET.getText().toString();
-
             try {
+                String text = mWriteET.getText().toString();
+
+
+
+                //目前有2种Client的输入：
+                //1。模拟App，这里输入的是 01，02，03。。。。99
+                //2。Commission App 输入的{"test":"01"} 这样的
+
+                //m1: 02 7e ba de 00
+                final byte[] m1Bbytes = {0x02, 0x7e, (byte) 0xba, (byte) 0xde, 0x00};
+
+
+                if(Integer.parseInt(text)>=0){
+                    //输入的数字，这个时候拼接成，{"test":"01"} 这样的
+
+                    text = String.format("{\"test\":\"%s\"}",text);
+
+
+                }else{
+                    //拼一个2可以内的json
+                    text =  MockRequestPackages.generateBigData();
+                }
 
                 text = text.replace(" ","");
                 text = text.replace("\r\n","");
                 text = text.replace("\n","");
-                //final Queue<byte[]> mockReqBytes = MockRequestPackages.getMockReqBytes(text.getBytes());
-                final Queue<byte[]> mockReqBytes = SplitPackage.splitByte(text.getBytes());
-                if(mockReqBytes!=null){
+                BleClientSender bleClientSender = new BleClientSender(mBluetoothGatt,service);
+                bleClientSender.sendMessage(text);
 
-                    final int packageCount = mockReqBytes.size();
-
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            for (int index = 0;index<packageCount;index++){
-
-                                byte[] peekByte = mockReqBytes.poll();
-
-                                characteristic.setValue(peekByte);
-                                packageToggle = Util.getPkgInfo(peekByte[0]).isPackageToggle();
-                                mBluetoothGatt.writeCharacteristic(characteristic);
-                                logTv("写入服务端分包儿:"+(index+1)+"/"+packageCount);
-                                logTv("分包儿内容:"+new String(peekByte));
-
-                                SystemClock.sleep(500);
-                            }
-                        }
-                    }).start();
-                }
             }catch (Exception e){
                 logTv("写入服务端错误！");
             }
@@ -286,7 +275,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
     }
 
     // 输出日志
-    private void logTv(final String msg) {
+    public void logTv(final String msg) {
         if (isDestroyed())
             return;
         runOnUiThread(new Runnable() {

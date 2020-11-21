@@ -17,9 +17,9 @@ public class SplitPackage {
 
 
 
-    public static Queue<byte[]> splitByte(byte[] wholeData) {
+    public static LinkedList<byte[]> splitByte(byte[] wholeData) {
 
-        Queue<byte[]> byteQueue = new LinkedList<>();
+        LinkedList<byte[]> byteQueue = new LinkedList<>();
         int pkgWholeCount;
         if (wholeData.length % packageSize == 0) {
             pkgWholeCount = wholeData.length / packageSize;
