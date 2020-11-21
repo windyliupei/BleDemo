@@ -63,8 +63,9 @@ public class BleServerSender {
                         Log.i("SENDBLE", "写对方分包儿:" + (index + 1) + "/" + packageCount);
                         Log.i("SENDBLE", "分包儿内容:" + new String(peekByte));
                         Log.i("SENDBLE", "分包儿内容:" + Util.bytesToHex(peekByte));
+
                         //发送太频繁会断开蓝牙
-                        SystemClock.sleep(500);
+                        SystemClock.sleep(100);
                     }
                 }
             };

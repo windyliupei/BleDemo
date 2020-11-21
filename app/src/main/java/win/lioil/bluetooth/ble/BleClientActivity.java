@@ -9,7 +9,7 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.os.Bundle;
-import android.os.SystemClock;
+
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -63,7 +63,6 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 logTv(String.format(status == 0 ? (newState == 2 ? "与[%s]连接成功" : "与[%s]连接断开") : ("与[%s]连接出错,错误码:" + status), dev));
 
             }
-
         }
 
         @Override
@@ -81,8 +80,6 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                     allUUIDs.append("}");
                     Log.i(TAG, "onServicesDiscovered:" + allUUIDs.toString());
                 }
-
-
 
                 BluetoothGattService service = getGattService(BleServerActivity.UUID_SERVICE);
                 if (service != null) {
@@ -184,11 +181,11 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
 
         //TODO:还不是明白为什么要写在这里？而之前的 read 那个不需要写入
-        BluetoothGattService service = new BluetoothGattService(UUID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
-        BluetoothGattCharacteristic characteristicWrite = new BluetoothGattCharacteristic(UUID_CHAR_WRITE_NOTIFY,
-                BluetoothGattCharacteristic.PROPERTY_WRITE|BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE);
-        characteristicWrite.addDescriptor(new BluetoothGattDescriptor(UUID_CHAR_WRITE_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE));
-        service.addCharacteristic(characteristicWrite);
+//        BluetoothGattService service = new BluetoothGattService(UUID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
+//        BluetoothGattCharacteristic characteristicWrite = new BluetoothGattCharacteristic(UUID_CHAR_WRITE_NOTIFY,
+//                BluetoothGattCharacteristic.PROPERTY_WRITE|BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE);
+//        characteristicWrite.addDescriptor(new BluetoothGattDescriptor(UUID_CHAR_WRITE_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE));
+//        service.addCharacteristic(characteristicWrite);
     }
 
     @Override
