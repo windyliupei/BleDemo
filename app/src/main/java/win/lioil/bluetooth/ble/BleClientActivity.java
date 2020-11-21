@@ -60,11 +60,26 @@ public class BleClientActivity extends Activity implements IPackageNotification 
             if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
                 isConnected = true;
                 gatt.discoverServices(); //启动服务发现
+                logTv(String.format(status == 0 ? (newState == 2 ? "与[%s]连接成功" : "与[%s]连接断开") : ("与[%s]连接出错,错误码:" + status), dev));
+
+                BluetoothGattService service = new BluetoothGattService(UUID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
+                if (service != null && mBluetoothGatt!=null) {
+
+                    // 设置Characteristic通知
+                    BluetoothGattCharacteristic w_characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可通知的Characteristic
+                    mBluetoothGatt.setCharacteristicNotification(w_characteristic, true);
+
+                    // 向Characteristic的Descriptor属性写入通知开关，使蓝牙设备主动向手机发送数据
+                    BluetoothGattDescriptor w_descriptor = w_characteristic.getDescriptors().get(0);
+                    w_descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                    mBluetoothGatt.writeDescriptor(w_descriptor);
+                }
             } else {
                 isConnected = false;
                 closeConn();
+                logTv(String.format(status == 0 ? (newState == 2 ? "与[%s]连接成功" : "与[%s]连接断开") : ("与[%s]连接出错,错误码:" + status), dev));
+
             }
-            logTv(String.format(status == 0 ? (newState == 2 ? "与[%s]连接成功" : "与[%s]连接断开") : ("与[%s]连接出错,错误码:" + status), dev));
         }
 
         @Override
@@ -181,6 +196,8 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         service.addCharacteristic(characteristicWrite);
 
 
+
+
     }
 
     @Override
@@ -205,65 +222,34 @@ public class BleClientActivity extends Activity implements IPackageNotification 
             mBleDevAdapter.reScan();
     }
 
-    // 注意：连续频繁读写数据容易失败，读写操作间隔最好200ms以上，或等待上次回调完成后再进行下次读写操作！
-    // 读取数据成功会回调->onCharacteristicChanged()
-    public void read(View view) {
-        BluetoothGattService service = getGattService(UUID_SERVICE);
-        if (service != null) {
-            //BluetoothGattCharacteristic characteristic = service.getCharacteristic(BleServerActivity.UUID_CHAR_READ_NOTIFY);//通过UUID获取可读的Characteristic
-            //mBluetoothGatt.readCharacteristic(characteristic);
-        }
-    }
 
     // 注意：连续频繁读写数据容易失败，读写操作间隔最好200ms以上，或等待上次回调完成后再进行下次读写操作！
     // 写入数据成功会回调->onCharacteristicWrite()
     public void write(View view) {
         BluetoothGattService service = getGattService(UUID_SERVICE);
-        final BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可写的Characteristic
 
-        if (service != null) {
+        if (service != null && isConnected) {
 
-            final String input = mWriteET.getText().toString();
+            final BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可写的Characteristic
             String text = mWriteET.getText().toString();
-
-            //目前有2种Client的输入：
-            //1。模拟App，这里输入的是 01，02，03。。。。99
-            //2。Commission App 输入的{"test":"01"} 这样的
-
-            //m1: 02 7e ba de 00
-            final byte[] m1Bbytes = {0x02, 0x7e, (byte) 0xba, (byte) 0xde, 0x00};
-
-
-            if(Integer.valueOf(text)>=0){
-                //输入的数字，这个时候拼接成，{"test":"01"} 这样的
-
-                text = String.format("{\"test\":\"%s\"}",text);
-
-
-            }else{
-                //拼一个2可以内的json
-                text =  MockRequestPackages.generateBigData();
-            }
 
             try {
 
+                text = text.replace(" ","");
+                text = text.replace("\r\n","");
+                text = text.replace("\n","");
                 //final Queue<byte[]> mockReqBytes = MockRequestPackages.getMockReqBytes(text.getBytes());
                 final Queue<byte[]> mockReqBytes = SplitPackage.splitByte(text.getBytes());
                 if(mockReqBytes!=null){
 
                     final int packageCount = mockReqBytes.size();
 
-                    final String finalText = text;
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
                             for (int index = 0;index<packageCount;index++){
 
                                 byte[] peekByte = mockReqBytes.poll();
-                                if(Integer.valueOf(input)==99){
-                                    Queue<byte[]> splitByte = SplitPackage.splitByte(m1Bbytes);
-                                    peekByte = splitByte.poll();
-                                }
 
                                 characteristic.setValue(peekByte);
                                 packageToggle = Util.getPkgInfo(peekByte[0]).isPackageToggle();
@@ -271,7 +257,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                                 logTv("写入服务端分包儿:"+(index+1)+"/"+packageCount);
                                 logTv("分包儿内容:"+new String(peekByte));
 
-                                SystemClock.sleep(1000);
+                                SystemClock.sleep(500);
                             }
                         }
                     }).start();
@@ -279,24 +265,13 @@ public class BleClientActivity extends Activity implements IPackageNotification 
             }catch (Exception e){
                 logTv("写入服务端错误！");
             }
+        }else{
+            APP.toast("请链接蓝牙设备!", 0);
         }
+
     }
 
-    // 设置通知Characteristic变化会回调->onCharacteristicChanged()
-    public void setNotify(View view) {
-        BluetoothGattService service = getGattService(UUID_SERVICE);
-        if (service != null) {
 
-            // 设置Characteristic通知
-            BluetoothGattCharacteristic w_characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可通知的Characteristic
-            mBluetoothGatt.setCharacteristicNotification(w_characteristic, true);
-
-            // 向Characteristic的Descriptor属性写入通知开关，使蓝牙设备主动向手机发送数据
-            BluetoothGattDescriptor w_descriptor = w_characteristic.getDescriptors().get(0);
-            w_descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-            mBluetoothGatt.writeDescriptor(w_descriptor);
-        }
-    }
 
     // 获取Gatt服务
     private BluetoothGattService getGattService(UUID uuid) {
