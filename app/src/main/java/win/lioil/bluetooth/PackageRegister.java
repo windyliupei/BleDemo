@@ -31,8 +31,8 @@ public class PackageRegister {
         }
     }
 
-//    public List<IPackageNotification> getListeners(){
-//        return list;
-//    }
+    public void clear(){
+         list.clear();
+    }
 
 }

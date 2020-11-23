@@ -22,7 +22,7 @@ public class BleClientSender {
     //As a Client sender, we need:
     private BluetoothGatt mBluetoothGatt;
     private BluetoothGattService mService;
-    private LinkedList<byte[]> mReqBytesList = new LinkedList<byte[]>();
+    //private LinkedList<byte[]> mReqBytesList = new LinkedList<byte[]>();
     private NonReEnterLock lock = new NonReEnterLock();
     private final ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
 
@@ -46,32 +46,30 @@ public class BleClientSender {
 
 
         //进入锁，这里是非可重入锁，同一个对象也不能在发送过程中，再发送数据。
-        lock.lock();
+        //lock.lock();
 
-        mReqBytesList.clear();
-
+        LinkedList<byte[]> mReqBytesList = new LinkedList<byte[]>();
         if (text.equals(" ")){
             mReqBytesList = SplitPackage.getPingPkg();
         }else{
             mReqBytesList = SplitPackage.splitByte(text.getBytes());
         }
 
-
-
         if(mReqBytesList !=null && mBluetoothGatt!=null){
 
 
-            final BluetoothGattCharacteristic characteristic = mService.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);
-            final int packageCount = mReqBytesList.size();
+            BluetoothGattCharacteristic characteristic = mService.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);
 
+            LinkedList<byte[]> finalMReqBytesList = mReqBytesList;
             Runnable runnable = new Runnable() {
                 @Override
                 public void run() {
 
+                    int packageCount = finalMReqBytesList.size();
                     for (int index = 0; index < packageCount; index++) {
 
                         //这里只取得数据，并不删除，当response ack后把确认发送成功的再删掉
-                        byte[] peekByte = mReqBytesList.get(index);
+                        byte[] peekByte = finalMReqBytesList.get(index);
 
                         characteristic.setValue(peekByte);
                         mBluetoothGatt.writeCharacteristic(characteristic);
@@ -90,7 +88,7 @@ public class BleClientSender {
             singleThreadExecutor.execute(runnable);
         }
         //释放锁
-        lock.unlock();
+        //lock.unlock();
     }
 
     public void sendMessage(LinkedList<byte[]> reqBytesList) throws InterruptedException {

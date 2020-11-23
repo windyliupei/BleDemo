@@ -211,6 +211,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         mBluetoothGattServer.addService(service);
 
         //注册 Package 的观察者
+        PackageRegister.getInstance().clear();
         PackageRegister.getInstance().addedPackageListener(this);
     }
 

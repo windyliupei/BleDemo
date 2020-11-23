@@ -201,6 +201,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         rv.setAdapter(mBleDevAdapter);
 
         //注册 Package 的观察者
+        PackageRegister.getInstance().clear();
         PackageRegister.getInstance().addedPackageListener(this);
 
         task = new TimerTask() {
