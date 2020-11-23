@@ -73,9 +73,27 @@ public class BleServerSender {
                         mBluetoothGattServer.notifyCharacteristicChanged(mDevice, mCharacteristic, false);
 
                         //这里偷懒了
-                        PackageRegister.getInstance().log("写对方分包儿:" + (index + 1) + "/" + packageCount);
-                        PackageRegister.getInstance().log("分包儿内容:" + new String(peekByte));
-                        PackageRegister.getInstance().log("分包儿内容:" + Util.bytesToHex(peekByte));
+                        String pkgType = "包儿类型：";
+                        if (Util.getPkgInfo(peekByte[0]).isAckR()){
+                            pkgType += "Ack,";
+                        }if (Util.getPkgInfo(peekByte[0]).isFragmentation()){
+                            pkgType += "Frag,";
+                        }if (Util.getPkgInfo(peekByte[0]).isLastPackage()){
+                            pkgType += "Last,";
+                        }if (Util.getPkgInfo(peekByte[0]).isMsgType()){
+                            pkgType += "Msg,";
+                        }
+                        if (pkgType.equals("包儿类型：")){
+                            pkgType += "正常包儿:";
+                        }
+
+                        pkgType+="Togg:"+Util.getPkgInfo(peekByte[0]).isPackageToggle();
+
+                        PackageRegister.getInstance().log("!##################写入对方分包儿################!");
+                        PackageRegister.getInstance().log("1.&Page&:" + (index + 1) + "/" + packageCount);
+                        PackageRegister.getInstance().log("2.&&"+pkgType);
+                        PackageRegister.getInstance().log("3.&分包儿内容&:" + new String(peekByte));
+                        PackageRegister.getInstance().log("4.&分包儿内容&:" + Util.bytesToHex(peekByte));
 
                         //发送太频繁会断开蓝牙
                         SystemClock.sleep(100);
@@ -111,14 +129,28 @@ public class BleServerSender {
                         mBluetoothGattServer.notifyCharacteristicChanged(mDevice, mCharacteristic, false);
 
                         //这里偷懒了
-                        PackageRegister.getInstance().log("写对方分包儿:" + (index + 1) + "/" + packageCount);
-                        PackageRegister.getInstance().log("分包儿内容:" + new String(peekByte));
-                        PackageRegister.getInstance().log("分包儿内容:" + Util.bytesToHex(peekByte));
-                        /*Log.i("SENDBLE", "写对方分包儿:" + (index + 1) + "/" + packageCount);
-                        Log.i("SENDBLE", "分包儿内容:" + new String(peekByte));
-                        Log.i("SENDBLE", "分包儿内容:" + Util.bytesToHex(peekByte));*/
+                        String pkgType = "包儿类型：";
+                        if (Util.getPkgInfo(peekByte[0]).isAckR()){
+                            pkgType += "Ack,";
+                        }if (Util.getPkgInfo(peekByte[0]).isFragmentation()){
+                            pkgType += "Frag,";
+                        }if (Util.getPkgInfo(peekByte[0]).isLastPackage()){
+                            pkgType += "Last,";
+                        }if (Util.getPkgInfo(peekByte[0]).isMsgType()){
+                            pkgType += "Msg,";
+                        }
+                        if (pkgType.equals("包儿类型：")){
+                            pkgType += "正常包儿:";
+                        }
 
-                        PackageRegister.getInstance().notification();
+                        pkgType+="Togg:"+Util.getPkgInfo(peekByte[0]).isPackageToggle();
+
+                        PackageRegister.getInstance().log("!##################写入对方分包儿################!");
+                        PackageRegister.getInstance().log("1.&Page&:" + (index + 1) + "/" + packageCount);
+                        PackageRegister.getInstance().log("2.&&"+pkgType);
+                        PackageRegister.getInstance().log("3.&分包儿内容&:" + new String(peekByte));
+                        PackageRegister.getInstance().log("4.&分包儿内容&:" + Util.bytesToHex(peekByte));
+
 
                         //发送太频繁会断开蓝牙
                         SystemClock.sleep(100);

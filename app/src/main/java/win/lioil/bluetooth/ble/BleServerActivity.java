@@ -87,17 +87,39 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         @Override
         public void onCharacteristicWriteRequest(final BluetoothDevice device, final int requestId, final BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, final int offset, final byte[] requestBytes) {
             // 获取客户端发过来的数据
-            String requestStr = new String(requestBytes);
-            logTv("收到 客户端写入 Characteristic[" + characteristic.getUuid() + "]:\n" + requestStr);
-            logTv("收到 客户端写入 Characteristic[" + characteristic.getUuid() + "]:\n" + Util.bytesToHex(requestBytes));
+
             mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, requestBytes);// 响应客户端
 
+            String pkgType = "包儿类型：";
+            if (Util.getPkgInfo(requestBytes[0]).isAckR()){
+                pkgType += "Ack,";
+            }if (Util.getPkgInfo(requestBytes[0]).isFragmentation()){
+                pkgType += "Frag,";
+            }if (Util.getPkgInfo(requestBytes[0]).isLastPackage()){
+                pkgType += "Last,";
+            }if (Util.getPkgInfo(requestBytes[0]).isMsgType()){
+                pkgType += "Msg,";
+            }
+            if (pkgType.equals("包儿类型：")){
+                pkgType += "正常包儿:";
+            }
+
+            pkgType+="Togg:"+Util.getPkgInfo(requestBytes[0]).isPackageToggle();
+
+            byte currentPkgIndex = requestBytes[2];
+            byte pageCount = requestBytes[1];
+
+            logTv("!------------------收到对方分包儿--------------------------!");
+            logTv("1.&Page&:"+currentPkgIndex + "/" + pageCount);
+            logTv("2.&&"+pkgType);
+            logTv("3.&分包儿内容&:" + new String(requestBytes));
+            logTv("4.&分包儿内容&:" + Util.bytesToHex(requestBytes));
 
             mBleReceiver = BleReceiver.getInstance(requestBytes);
+
             LinkedList<byte[]> needSendBack = mBleReceiver.receiveData(requestBytes);
             mBleServerSender = BleServerSender.getInstance(characteristic,mBluetoothGattServer,device,this);
             if (needSendBack!=null && needSendBack.size()>0){
-
                 if (mBleServerSender !=null){
                     try {
                         mBleServerSender.sendMessage(needSendBack);
@@ -207,8 +229,8 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                APP.toast(msg, 0);
-                mTips.append(msg + "\n\n");
+                //APP.toast(msg, 0);
+                mTips.append(msg + "\n");
             }
         });
     }
@@ -217,17 +239,15 @@ public class BleServerActivity extends Activity implements IPackageNotification 
     public void receiveLastPackage() {
         if (mBleReceiver!=null){
             String exportToJson = mBleReceiver.exportToJson();
-
-
             logTv("Receive All From Client:"+exportToJson);
 
-            if (mBleServerSender !=null){
-                try {
-                    mBleServerSender.sendMessage(exportToJson);
-                } catch (InterruptedException e) {
-                    logTv("Send back Error!");
-                }
-            }
+//            if (mBleServerSender !=null){
+//                try {
+//                    mBleServerSender.sendMessage(exportToJson);
+//                } catch (InterruptedException e) {
+//                    logTv("Send back Error!");
+//                }
+//            }
         }
     }
 

@@ -10,27 +10,32 @@ import win.lioil.bluetooth.util.Util;
 public class BleReceiver {
 
     private LinkedList<ByteBuffer> mReqBytesList;
+    private boolean currentToggle = false;
 
 
     public static BleReceiver getInstance(byte[] data) {
+
         BleReceiver sender = BleReceiverHolder.sBleManager;
 
-        if (sender.mReqBytesList == null){
-            sender.mReqBytesList = new LinkedList<>();
-            byte count = data[1];
-            for (int index =0;index<=count;index++){
-                sender.mReqBytesList.add(ByteBuffer.allocate(20));
-            }
-        }else{
-            if(sender.isReceiveAll()){
+        if(!Util.isPing(data)){
+            if (sender.mReqBytesList == null){
                 sender.mReqBytesList = new LinkedList<>();
                 byte count = data[1];
-                for (int index =0;index<=count;index++){
+                for (int index =0;index<count;index++){
                     sender.mReqBytesList.add(ByteBuffer.allocate(20));
+                }
+            }else{
+                //是一个反转包儿，证明不是一个业务包儿了
+                if(Util.getPkgInfo(data[0]).isPackageToggle()!=sender.currentToggle){
+                    sender.mReqBytesList.clear();
+                    byte count = data[1];
+                    for (int index =0;index<count;index++){
+                        sender.mReqBytesList.add(ByteBuffer.allocate(20));
+                    }
+                    sender.currentToggle = Util.getPkgInfo(data[0]).isPackageToggle();
                 }
             }
         }
-
         return sender;
     }
 
@@ -43,22 +48,28 @@ public class BleReceiver {
 
     public LinkedList<byte[]> receiveData(byte[] data){
 
-        LinkedList<byte[]> needSendPkg = new LinkedList<byte[]>();
+        if(Util.isPing(data)){
+            return null;
+        }
 
+        LinkedList<byte[]> needSendPkg = new LinkedList<byte[]>();
         byte currentPkgIndex = data[2];
+        byte pageCount = data[1];
+
+
 
         //对方ack 应答的回复，包含对方已经收到包儿的信息
         //这种包儿不包含真实业务的payload的
         if (Util.getPkgInfo(data[0]).isMsgType()){
             for (int i = 0; i < mReqBytesList.size(); i++) {
                 //如果第n包儿没有收到消息
-                if(mReqBytesList.get(i).position()<1){
+                if( mReqBytesList.get(i).position()==0){
                     //TODO：先不发丢包儿
                 }
             }
         }else{
             for (int i = 0; i < data.length; i++) {
-                mReqBytesList.get(currentPkgIndex).put(data[i]);
+                mReqBytesList.get(currentPkgIndex-1).put( data[i]);
             }
         }
 
@@ -70,12 +81,10 @@ public class BleReceiver {
             needSendPkg.add(ackRsp);
         }
 
-
         boolean allReceived = isReceiveAll() ;
         if (allReceived){
             //通知所有订阅者 package 收齐了，可以显示界面了
             PackageRegister.getInstance().notification();
-
         }
 
         return needSendPkg;
@@ -84,7 +93,7 @@ public class BleReceiver {
 
     private boolean isReceiveAll(){
         Stream<ByteBuffer> stream = mReqBytesList.stream();
-        boolean allMatch = stream.allMatch(byteBuff -> byteBuff.position() > 0);
+        boolean allMatch = stream.allMatch(byteBuff -> byteBuff.position() != 0);
         return allMatch;
     }
 
@@ -92,6 +101,7 @@ public class BleReceiver {
 
         byte count = data[1];
         byte currentPkgIndex = data[2];
+
 
         //要看看对方是否发来了最后一包
         boolean isReceiveLastPkg = (count==currentPkgIndex)
@@ -106,21 +116,21 @@ public class BleReceiver {
 
         StringBuffer sb = new StringBuffer();
 
-        if (isReceiveAll()){
             for (int index = 0; index< mReqBytesList.size(); index++){
+
                 ByteBuffer byteBuffer = mReqBytesList.get(index);
                 //复位 buffer,开始读
-                byteBuffer.flip();
+                byteBuffer.position(3);
 
                 byte[] dst = new byte[17];
-                byteBuffer.get(dst,3,17);
+                byteBuffer.get(dst);
 
                 sb.append(new String(dst));
 
                 //复位 buffer,开始写
                 byteBuffer.compact();
 
-            }
+
         }
 
         mReqBytesList.clear();

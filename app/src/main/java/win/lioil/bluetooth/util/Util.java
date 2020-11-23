@@ -152,4 +152,44 @@ public class Util {
 
         return ackRsp;
     }
+
+    public static byte[] getPing(){
+
+        PackageHead head = new PackageHead();
+        head.setAckR(false);
+        head.setPackageToggle(false);
+        head.setFragmentation(false);
+        head.setEncP(false);
+        head.setLastPackage(false);
+        head.setReserve1(false);
+        head.setReserve2(false);
+        head.setMsgType(false);
+
+        byte[] ackRsp = new byte[20];
+        ackRsp[0] = Util.getHead(head);
+
+        ackRsp[1] = 0x01;
+        ackRsp[2] = 0x01;
+        ackRsp[3] = 0x00;
+
+        for (int index = 4;index<20;index++){
+            ackRsp[index] = (byte) 0x99;
+        }
+
+
+
+        return ackRsp;
+    }
+
+    public static boolean isPing(byte[] data){
+
+        boolean isPing = true;
+        for (int index = 4;index<20;index++){
+            if(data[index] != (byte) 0x99){
+                isPing = false;
+                break;
+            }
+        }
+        return isPing;
+    }
 }

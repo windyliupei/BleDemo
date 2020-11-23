@@ -3,6 +3,7 @@ package win.lioil.bluetooth;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import win.lioil.bluetooth.ble.TogglePackage;
 import win.lioil.bluetooth.util.Util;
 
 public class SplitPackage {
@@ -15,6 +16,13 @@ public class SplitPackage {
     private static final int packageCount = 127;
 
 
+    public static LinkedList<byte[]> getPingPkg(){
+        LinkedList<byte[]> byteQueue = new LinkedList<>();
+
+        byteQueue.offer(Util.getPing());
+
+        return byteQueue;
+    }
 
 
     public static LinkedList<byte[]> splitByte(byte[] wholeData) {
@@ -27,23 +35,12 @@ public class SplitPackage {
             pkgWholeCount = Math.round((wholeData.length / packageSize) + 1);
         }
 
-        boolean packageToggle = false;
-        int pkgToggleCount = 1;
-
         int headLength = headByte.length;
 
         if (pkgWholeCount > 0) {
             for (int pkgWholeIndex = 1; pkgWholeIndex <= pkgWholeCount; pkgWholeIndex++) {
 
-                if(pkgToggleCount>=packageCount){
-                    packageToggle =!packageToggle;
-                    //每127包儿重新计数
-                    pkgToggleCount = 0;
-                }
-
-                calHead(packageToggle,pkgWholeCount, pkgWholeIndex);
-
-                pkgToggleCount++;
+                calHead(TogglePackage.getToggle()==1,pkgWholeCount, pkgWholeIndex);
 
                 byte[] dataPkg;
                 int lastPkgLength;
@@ -115,7 +112,6 @@ public class SplitPackage {
         String indexHex= Integer.toHexString(pkgIndex);
         headByte[2] = Util.hexToBytes(indexHex)[0];
 
-        System.out.println(Util.bytesToHex(headByte));
     }
 
 

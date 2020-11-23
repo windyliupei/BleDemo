@@ -44,11 +44,19 @@ public class BleClientSender {
 
     public void sendMessage(String text) throws InterruptedException {
 
+
         //进入锁，这里是非可重入锁，同一个对象也不能在发送过程中，再发送数据。
         lock.lock();
 
         mReqBytesList.clear();
-        mReqBytesList = SplitPackage.splitByte(text.getBytes());
+
+        if (text.equals(" ")){
+            mReqBytesList = SplitPackage.getPingPkg();
+        }else{
+            mReqBytesList = SplitPackage.splitByte(text.getBytes());
+        }
+
+
 
         if(mReqBytesList !=null && mBluetoothGatt!=null){
 
@@ -74,7 +82,7 @@ public class BleClientSender {
                         PackageRegister.getInstance().log("分包儿内容:" + Util.bytesToHex(peekByte));
 
                         //发送太频繁会断开蓝牙
-                        SystemClock.sleep(500);
+                        SystemClock.sleep(100);
                     }
                 }
             };
@@ -112,7 +120,7 @@ public class BleClientSender {
                         PackageRegister.getInstance().log("分包儿内容:" + Util.bytesToHex(peekByte));
 
                         //发送太频繁会断开蓝牙
-                        SystemClock.sleep(500);
+                        SystemClock.sleep(100);
                     }
                 }
             };
