@@ -25,6 +25,12 @@ public class PackageRegister {
         }
     }
 
+    public void log(String str){
+        for (IPackageNotification p : list) {
+            p.logTv(str);
+        }
+    }
+
 //    public List<IPackageNotification> getListeners(){
 //        return list;
 //    }

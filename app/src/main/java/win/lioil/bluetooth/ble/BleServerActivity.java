@@ -18,23 +18,18 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.ParcelUuid;
-import android.os.SystemClock;
 import android.util.Log;
 import android.widget.TextView;
-
-import net.vidageek.mirror.dsl.Mirror;
 
 import java.net.NetworkInterface;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
 import java.util.UUID;
 
 import win.lioil.bluetooth.APP;
 import win.lioil.bluetooth.IPackageNotification;
-import win.lioil.bluetooth.MergePackage;
-import win.lioil.bluetooth.MockResponsePackages;
 import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
 import win.lioil.bluetooth.util.Util;
@@ -53,6 +48,9 @@ public class BleServerActivity extends Activity implements IPackageNotification 
     private BluetoothGattServer mBluetoothGattServer; // BLE服务端
 
     private boolean packageToggle;
+
+    private BleReceiver mBleReceiver;
+    private BleServerSender mBleServerSender;
 
     // BLE广播Callback
     private AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
@@ -83,70 +81,31 @@ public class BleServerActivity extends Activity implements IPackageNotification 
 
         @Override
         public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset, BluetoothGattCharacteristic characteristic) {
-            Log.i(TAG, String.format("onCharacteristicReadRequest:%s,%s,%s,%s,%s", device.getName(), device.getAddress(), requestId, offset, characteristic.getUuid()));
-            String response = "CHAR_" + (int) (Math.random() * 100); //模拟数据
-            mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, response.getBytes());// 响应客户端
-            logTv("客户端读取Characteristic[" + characteristic.getUuid() + "]:\n" + response);
 
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            String response2 = "SEONND_" + (int) (Math.random() * 100); //模拟数据
-            mBluetoothGattServer.sendResponse(device, requestId+1, BluetoothGatt.GATT_SUCCESS, offset, response2.getBytes());// 响应客户端
-
-            logTv("客户端读取Characteristic[" + characteristic.getUuid() + "]:\n" + response2);
         }
 
         @Override
         public void onCharacteristicWriteRequest(final BluetoothDevice device, final int requestId, final BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, final int offset, final byte[] requestBytes) {
             // 获取客户端发过来的数据
             String requestStr = new String(requestBytes);
-            Log.i(TAG, String.format("onCharacteristicWriteRequest:%s,%s,%s,%s,%s,%s,%s,%s", device.getName(), device.getAddress(), requestId, characteristic.getUuid(),
-                    preparedWrite, responseNeeded, offset, requestStr));
-
             logTv("收到 客户端写入 Characteristic[" + characteristic.getUuid() + "]:\n" + requestStr);
             logTv("收到 客户端写入 Characteristic[" + characteristic.getUuid() + "]:\n" + Util.bytesToHex(requestBytes));
             mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, requestBytes);// 响应客户端
 
 
-            //是个ack 的回复包儿，需要重发丢失的包儿
-            if(Util.getPkgInfo(requestBytes[0]).isMsgType()){
-                //这里处理丢包儿，把丢的包儿给Client再发回去
-            }else{
-                MergePackage.getInstance().appendPackage(requestBytes);
-            }
+            mBleReceiver = BleReceiver.getInstance(requestBytes);
+            LinkedList<byte[]> needSendBack = mBleReceiver.receiveData(requestBytes);
+            mBleServerSender = BleServerSender.getInstance(characteristic,mBluetoothGattServer,device,this);
+            if (needSendBack!=null && needSendBack.size()>0){
 
-
-            //TODO:这里是不支持多个设备同时接入的
-            if(MergePackage.getInstance().isReceiveLastPackage()){
-                //最后一包儿后，发送 response
-                String clientWholeJson = MergePackage.getInstance().exportToJson();
-                logTv("收到所有Client的Req JSON:"+clientWholeJson);
-
-                try {
-
-                    String mockRspStr = MockResponsePackages.getMockRsp(clientWholeJson);
-                    if(mockRspStr!=null){
-                        BleServerSender sender = new BleServerSender(characteristic,mBluetoothGattServer,device);
-                        sender.sendMessage(mockRspStr);
+                if (mBleServerSender !=null){
+                    try {
+                        mBleServerSender.sendMessage(needSendBack);
+                    } catch (InterruptedException e) {
+                        logTv("Send back Error!");
                     }
-
-                }catch (Exception e){
-                    logTv("Error！");
                 }
             }
-
-            //是个ack包儿，需要回收到了哪些包儿，没收到哪些包儿
-            if(Util.getPkgInfo(requestBytes[0]).isAckR()){
-                byte[] ackRsp = Util.getAckRsp(packageToggle);
-                characteristic.setValue(ackRsp);
-                mBluetoothGattServer.notifyCharacteristicChanged(device, characteristic, false);
-            }
-
-
         }
 
         @Override
@@ -242,7 +201,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
             mBluetoothGattServer.close();
     }
 
-    private void logTv(final String msg) {
+    public void logTv(final String msg) {
         if (isDestroyed())
             return;
         runOnUiThread(new Runnable() {
@@ -256,6 +215,20 @@ public class BleServerActivity extends Activity implements IPackageNotification 
 
     @Override
     public void receiveLastPackage() {
+        if (mBleReceiver!=null){
+            String exportToJson = mBleReceiver.exportToJson();
+
+
+            logTv("Receive All From Client:"+exportToJson);
+
+            if (mBleServerSender !=null){
+                try {
+                    mBleServerSender.sendMessage(exportToJson);
+                } catch (InterruptedException e) {
+                    logTv("Send back Error!");
+                }
+            }
+        }
     }
 
     private byte[] generateManufacturerData(){

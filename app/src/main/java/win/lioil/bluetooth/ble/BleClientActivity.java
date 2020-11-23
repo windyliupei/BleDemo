@@ -18,11 +18,12 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.UUID;
 
 import win.lioil.bluetooth.APP;
 import win.lioil.bluetooth.IPackageNotification;
-import win.lioil.bluetooth.MergePackage;
 import win.lioil.bluetooth.MockRequestPackages;
 import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
@@ -43,7 +44,9 @@ public class BleClientActivity extends Activity implements IPackageNotification 
     private BluetoothGatt mBluetoothGatt;
     private boolean isConnected = false;
 
-    private boolean packageToggle;
+
+    private BleReceiver mBleReceiver;
+    private BleClientSender mBleClientSender;
 
     // 与服务端连接的Callback
     public BluetoothGattCallback mBluetoothGattCallback = new BluetoothGattCallback() {
@@ -61,7 +64,6 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 isConnected = false;
                 closeConn();
                 logTv(String.format(status == 0 ? (newState == 2 ? "与[%s]连接成功" : "与[%s]连接断开") : ("与[%s]连接出错,错误码:" + status), dev));
-
             }
         }
 
@@ -93,6 +95,8 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                     descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
                     mBluetoothGatt.writeDescriptor(descriptor);
                 }
+
+                mBleClientSender = BleClientSender.getInstance(mBluetoothGatt,service);
             }
         }
 
@@ -117,28 +121,20 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
             byte[] msg = characteristic.getValue();
 
-            //是个ack的回复包儿，需要重发丢失的包儿
-            if(Util.getPkgInfo(msg[0]).isMsgType()){
-                //这里处理丢包儿，把丢的包儿给Client再发回去
-            }else{
-                MergePackage.getInstance().appendPackage(msg);
+            mBleReceiver = BleReceiver.getInstance(msg);
+
+            //也许是send ack 的 回复，也许是send 之前丢的包儿
+            LinkedList<byte[]> needSendBack = mBleReceiver.receiveData(msg);
+            if (needSendBack!=null && needSendBack.size()>0){
+
+                if (mBleClientSender!=null){
+                    try {
+                        mBleClientSender.sendMessage(needSendBack);
+                    } catch (InterruptedException e) {
+                        logTv("Send back Error!");
+                    }
+                }
             }
-
-
-            if(MergePackage.getInstance().isReceiveLastPackage()){
-                //Client 最后一包儿后，把Log打出来
-                String rspWholeJson = MergePackage.getInstance().exportToJson();
-                logTv("收到所有Server的Rsp JSON");
-                logTv(rspWholeJson);
-
-            }
-
-            //是个ack包儿，需要回收到了哪些包儿，没收到哪些包儿
-            if(Util.getPkgInfo(msg[0]).isAckR()){
-                logTv("收到Ack Package");
-                writeSinglePackage(Util.getAckRsp(packageToggle));
-            }
-
         }
 
         @Override
@@ -179,13 +175,6 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         //注册 Package 的观察者
         PackageRegister.getInstance().addedPackageListener(this);
 
-
-        //TODO:还不是明白为什么要写在这里？而之前的 read 那个不需要写入
-//        BluetoothGattService service = new BluetoothGattService(UUID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
-//        BluetoothGattCharacteristic characteristicWrite = new BluetoothGattCharacteristic(UUID_CHAR_WRITE_NOTIFY,
-//                BluetoothGattCharacteristic.PROPERTY_WRITE|BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE);
-//        characteristicWrite.addDescriptor(new BluetoothGattDescriptor(UUID_CHAR_WRITE_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE));
-//        service.addCharacteristic(characteristicWrite);
     }
 
     @Override
@@ -233,10 +222,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
                 if(Integer.parseInt(text)>=0){
                     //输入的数字，这个时候拼接成，{"test":"01"} 这样的
-
                     text = String.format("{\"test\":\"%s\"}",text);
-
-
                 }else{
                     //拼一个2可以内的json
                     text =  MockRequestPackages.generateBigData();
@@ -245,8 +231,10 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 text = text.replace(" ","");
                 text = text.replace("\r\n","");
                 text = text.replace("\n","");
-                BleClientSender bleClientSender = new BleClientSender(mBluetoothGatt,service);
-                bleClientSender.sendMessage(text);
+                if (mBleClientSender != null){
+                    mBleClientSender.sendMessage(text);
+                }
+
 
             }catch (Exception e){
                 logTv("写入服务端错误！");
@@ -254,7 +242,6 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         }else{
             APP.toast("请链接蓝牙设备!", 0);
         }
-
     }
 
 
@@ -286,15 +273,21 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
     @Override
     public void receiveLastPackage() {
-
+        if (mBleReceiver!=null){
+            String exportToJson = mBleReceiver.exportToJson();
+            logTv("Receive All From Server:"+exportToJson);
+        }
     }
 
-    private void writeSinglePackage(byte[] singleByte){
+    /*private void writeSinglePackage(byte[] singleByte){
+
+        Util.getAckRsp(packageToggle)
+
         BluetoothGattService service = getGattService(UUID_SERVICE);
         BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可写的Characteristic
 
         characteristic.setValue(singleByte);
         mBluetoothGatt.writeCharacteristic(characteristic);
         logTv("发送 Ack Package:"+Util.bytesToHex(singleByte));
-    }
+    }*/
 }

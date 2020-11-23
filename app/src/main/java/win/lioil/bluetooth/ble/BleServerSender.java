@@ -3,6 +3,7 @@ package win.lioil.bluetooth.ble;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattServer;
+import android.bluetooth.BluetoothGattServerCallback;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -10,6 +11,7 @@ import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.SplitPackage;
 import win.lioil.bluetooth.util.NonReEnterLock;
 import win.lioil.bluetooth.util.Util;
@@ -20,33 +22,43 @@ public class BleServerSender {
     //As a server sender, we need:
     private BluetoothGattCharacteristic mCharacteristic;
     private BluetoothGattServer mBluetoothGattServer;
-    private BluetoothDevice mClientdevice;
-
-
-    private LinkedList<byte[]> mReqBytes;
-
+    private BluetoothDevice mDevice;
+    private LinkedList<byte[]> mReqBytesList = new LinkedList<byte[]>();
     private NonReEnterLock lock = new NonReEnterLock();
-
     final private ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
 
-    public BleServerSender(BluetoothGattCharacteristic characteristic,
-                           BluetoothGattServer bluetoothGattServer,BluetoothDevice clientdevice) {
-        mBluetoothGattServer = bluetoothGattServer;
-        mCharacteristic = characteristic;
-        mClientdevice = clientdevice;
+
+    public static BleServerSender getInstance(BluetoothGattCharacteristic characteristic,
+                                              BluetoothGattServer bluetoothGattServer,
+                                              BluetoothDevice device, BluetoothGattServerCallback bluetoothGattServerCallback) {
+        BleServerSender sender = BleServerSenderHolder.sBleManager;
+        sender.mCharacteristic = characteristic;
+        sender.mBluetoothGattServer = bluetoothGattServer;
+        sender.mDevice = device;
+
+        return sender;
+    }
+
+    private static class BleServerSenderHolder {
+        private static final BleServerSender sBleManager = new BleServerSender();
+    }
+
+    private BleServerSender() {
+
     }
 
 
-    public void sendMessage(String text) throws Exception {
+    public void sendMessage(String text) throws InterruptedException {
 
         //进入锁，这里是非可重入锁，同一个对象也不能在发送过程中，再发送数据。
         lock.lock();
 
-        mReqBytes = SplitPackage.splitByte(text.getBytes());
+        mReqBytesList.clear();
+        mReqBytesList = SplitPackage.splitByte(text.getBytes());
 
-        if(mBluetoothGattServer!=null && mCharacteristic!=null && mClientdevice!=null){
+        if(mBluetoothGattServer!=null && mCharacteristic!=null && mDevice!=null){
 
-            final int packageCount = mReqBytes.size();
+            final int packageCount = mReqBytesList.size();
 
             Runnable runnable = new Runnable() {
                 @Override
@@ -55,14 +67,15 @@ public class BleServerSender {
                     for (int index = 0; index < packageCount; index++) {
 
                         //这里只取得数据，并不删除，当response ack后把确认发送成功的再删掉
-                        byte[] peekByte = mReqBytes.get(index);
+                        byte[] peekByte = mReqBytesList.get(index);
 
                         mCharacteristic.setValue(peekByte);
-                        mBluetoothGattServer.notifyCharacteristicChanged(mClientdevice, mCharacteristic, false);
+                        mBluetoothGattServer.notifyCharacteristicChanged(mDevice, mCharacteristic, false);
 
-                        Log.i("SENDBLE", "写对方分包儿:" + (index + 1) + "/" + packageCount);
-                        Log.i("SENDBLE", "分包儿内容:" + new String(peekByte));
-                        Log.i("SENDBLE", "分包儿内容:" + Util.bytesToHex(peekByte));
+                        //这里偷懒了
+                        PackageRegister.getInstance().log("写对方分包儿:" + (index + 1) + "/" + packageCount);
+                        PackageRegister.getInstance().log("分包儿内容:" + new String(peekByte));
+                        PackageRegister.getInstance().log("分包儿内容:" + Util.bytesToHex(peekByte));
 
                         //发送太频繁会断开蓝牙
                         SystemClock.sleep(100);
@@ -76,14 +89,14 @@ public class BleServerSender {
         lock.unlock();
     }
 
-    //TODO：发送之前丢失的包儿时，包头还需重新计算吗？
-    private void sendLostMessage() throws Exception {
+    public void sendMessage(LinkedList<byte[]> reqBytesList) throws InterruptedException {
 
+        //进入锁，这里是非可重入锁，同一个对象也不能在发送过程中，再发送数据。
         lock.lock();
 
-        if(mBluetoothGattServer!=null && mCharacteristic!=null){
+        if(reqBytesList !=null && mBluetoothGattServer!=null && mCharacteristic!=null && mDevice!=null){
 
-            final int packageCount = mReqBytes.size();
+            final int packageCount = reqBytesList.size();
 
             Runnable runnable = new Runnable() {
                 @Override
@@ -92,44 +105,34 @@ public class BleServerSender {
                     for (int index = 0; index < packageCount; index++) {
 
                         //这里只取得数据，并不删除，当response ack后把确认发送成功的再删掉
-                        byte[] peekByte = mReqBytes.get(index);
+                        byte[] peekByte = reqBytesList.get(index);
 
                         mCharacteristic.setValue(peekByte);
-                        mBluetoothGattServer.notifyCharacteristicChanged(mClientdevice, mCharacteristic, false);
+                        mBluetoothGattServer.notifyCharacteristicChanged(mDevice, mCharacteristic, false);
 
-                        Log.i("SENDBLE", "写对方分包儿:" + (index + 1) + "/" + packageCount);
+                        //这里偷懒了
+                        PackageRegister.getInstance().log("写对方分包儿:" + (index + 1) + "/" + packageCount);
+                        PackageRegister.getInstance().log("分包儿内容:" + new String(peekByte));
+                        PackageRegister.getInstance().log("分包儿内容:" + Util.bytesToHex(peekByte));
+                        /*Log.i("SENDBLE", "写对方分包儿:" + (index + 1) + "/" + packageCount);
                         Log.i("SENDBLE", "分包儿内容:" + new String(peekByte));
-                        Log.i("SENDBLE", "分包儿内容:" + Util.bytesToHex(peekByte));
+                        Log.i("SENDBLE", "分包儿内容:" + Util.bytesToHex(peekByte));*/
+
+                        PackageRegister.getInstance().notification();
+
                         //发送太频繁会断开蓝牙
-                        SystemClock.sleep(500);
+                        SystemClock.sleep(100);
                     }
                 }
             };
-
+            //线程池里去搞，不要每次new 一个线程
             singleThreadExecutor.execute(runnable);
         }
-
+        //释放锁
         lock.unlock();
     }
 
 
-    //TODO：
-    public void processAckData(byte[] ackData){
 
-        if (ackData==null || ackData.length==0){
-            return;
-        }
 
-        //分析 ack 包儿，找出丢失的包儿。
-
-        //把已经发送的包儿remove
-        mReqBytes.remove(0);
-
-        try {
-            sendLostMessage();
-        } catch (Exception e) {
-            Log.e("SENDBLE","Send lost data error");
-        }
-
-    }
 }

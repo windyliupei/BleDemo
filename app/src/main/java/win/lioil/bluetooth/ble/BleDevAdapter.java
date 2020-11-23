@@ -57,7 +57,6 @@ public class BleDevAdapter extends RecyclerView.Adapter<BleDevAdapter.VH> {
     // 扫描BLE蓝牙(不会扫描经典蓝牙)
     private void scanBle() {
         isScanning = true;
-//        BluetoothAdapter bluetoothAdapter = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE).getDefaultAdapter();
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         final BluetoothLeScanner bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
         // Android5.0新增的扫描API，扫描返回的结果更友好，比如BLE广播数据以前是byte[] scanRecord，而新API帮我们解析成ScanRecord类

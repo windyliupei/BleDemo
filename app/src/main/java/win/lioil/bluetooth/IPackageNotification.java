@@ -4,4 +4,6 @@ public interface IPackageNotification {
 
     void receiveLastPackage();
 
+    void logTv(final String msg);
+
 }
