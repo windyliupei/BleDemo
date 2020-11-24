@@ -96,7 +96,7 @@ public class BleServerSender {
                         PackageRegister.getInstance().log("4.&分包儿内容&:" + Util.bytesToHex(peekByte));
 
                         //发送太频繁会断开蓝牙
-                        SystemClock.sleep(100);
+                        SystemClock.sleep(500);
                     }
                 }
             };
@@ -153,7 +153,7 @@ public class BleServerSender {
 
 
                         //发送太频繁会断开蓝牙
-                        SystemClock.sleep(100);
+                        SystemClock.sleep(500);
                     }
                 }
             };
