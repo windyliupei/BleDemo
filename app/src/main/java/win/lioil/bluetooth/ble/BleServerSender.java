@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 
 import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.SplitPackage;
+import win.lioil.bluetooth.util.BleLog;
 import win.lioil.bluetooth.util.NonReEnterLock;
 import win.lioil.bluetooth.util.Util;
 
@@ -23,14 +24,14 @@ public class BleServerSender {
     private BluetoothGattCharacteristic mCharacteristic;
     private BluetoothGattServer mBluetoothGattServer;
     private BluetoothDevice mDevice;
-    private LinkedList<byte[]> mReqBytesList = new LinkedList<byte[]>();
+
     private NonReEnterLock lock = new NonReEnterLock();
     final private ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
 
 
     public static BleServerSender getInstance(BluetoothGattCharacteristic characteristic,
                                               BluetoothGattServer bluetoothGattServer,
-                                              BluetoothDevice device, BluetoothGattServerCallback bluetoothGattServerCallback) {
+                                              BluetoothDevice device) {
         BleServerSender sender = BleServerSenderHolder.sBleManager;
         sender.mCharacteristic = characteristic;
         sender.mBluetoothGattServer = bluetoothGattServer;
@@ -50,61 +51,11 @@ public class BleServerSender {
 
     public void sendMessage(String text) throws InterruptedException {
 
-        //进入锁，这里是非可重入锁，同一个对象也不能在发送过程中，再发送数据。
-        lock.lock();
-
-        mReqBytesList.clear();
+        LinkedList<byte[]> mReqBytesList = new LinkedList<byte[]>();
         mReqBytesList = SplitPackage.splitByte(text.getBytes());
 
-        if(mBluetoothGattServer!=null && mCharacteristic!=null && mDevice!=null){
+        this.sendMessage(mReqBytesList);
 
-            final int packageCount = mReqBytesList.size();
-
-            Runnable runnable = new Runnable() {
-                @Override
-                public void run() {
-
-                    for (int index = 0; index < packageCount; index++) {
-
-                        //这里只取得数据，并不删除，当response ack后把确认发送成功的再删掉
-                        byte[] peekByte = mReqBytesList.get(index);
-
-                        mCharacteristic.setValue(peekByte);
-                        mBluetoothGattServer.notifyCharacteristicChanged(mDevice, mCharacteristic, false);
-
-                        //这里偷懒了
-                        String pkgType = "包儿类型：";
-                        if (Util.getPkgInfo(peekByte[0]).isAckR()){
-                            pkgType += "Ack,";
-                        }if (Util.getPkgInfo(peekByte[0]).isFragmentation()){
-                            pkgType += "Frag,";
-                        }if (Util.getPkgInfo(peekByte[0]).isLastPackage()){
-                            pkgType += "Last,";
-                        }if (Util.getPkgInfo(peekByte[0]).isMsgType()){
-                            pkgType += "Msg,";
-                        }
-                        if (pkgType.equals("包儿类型：")){
-                            pkgType += "正常包儿:";
-                        }
-
-                        pkgType+="Togg:"+Util.getPkgInfo(peekByte[0]).isPackageToggle();
-
-                        PackageRegister.getInstance().log("!##################写入对方分包儿################!");
-                        PackageRegister.getInstance().log("1.&Page&:" + (index + 1) + "/" + packageCount);
-                        PackageRegister.getInstance().log("2.&&"+pkgType);
-                        PackageRegister.getInstance().log("3.&分包儿内容&:" + new String(peekByte));
-                        PackageRegister.getInstance().log("4.&分包儿内容&:" + Util.bytesToHex(peekByte));
-
-                        //发送太频繁会断开蓝牙
-                        SystemClock.sleep(500);
-                    }
-                }
-            };
-            //线程池里去搞，不要每次new 一个线程
-            singleThreadExecutor.execute(runnable);
-        }
-        //释放锁
-        lock.unlock();
     }
 
     public void sendMessage(LinkedList<byte[]> reqBytesList) throws InterruptedException {
@@ -128,29 +79,8 @@ public class BleServerSender {
                         mCharacteristic.setValue(peekByte);
                         mBluetoothGattServer.notifyCharacteristicChanged(mDevice, mCharacteristic, false);
 
-                        //这里偷懒了
-                        String pkgType = "包儿类型：";
-                        if (Util.getPkgInfo(peekByte[0]).isAckR()){
-                            pkgType += "Ack,";
-                        }if (Util.getPkgInfo(peekByte[0]).isFragmentation()){
-                            pkgType += "Frag,";
-                        }if (Util.getPkgInfo(peekByte[0]).isLastPackage()){
-                            pkgType += "Last,";
-                        }if (Util.getPkgInfo(peekByte[0]).isMsgType()){
-                            pkgType += "Msg,";
-                        }
-                        if (pkgType.equals("包儿类型：")){
-                            pkgType += "正常包儿:";
-                        }
 
-                        pkgType+="Togg:"+Util.getPkgInfo(peekByte[0]).isPackageToggle();
-
-                        PackageRegister.getInstance().log("!##################写入对方分包儿################!");
-                        PackageRegister.getInstance().log("1.&Page&:" + (index + 1) + "/" + packageCount);
-                        PackageRegister.getInstance().log("2.&&"+pkgType);
-                        PackageRegister.getInstance().log("3.&分包儿内容&:" + new String(peekByte));
-                        PackageRegister.getInstance().log("4.&分包儿内容&:" + Util.bytesToHex(peekByte));
-
+                        BleLog.w(index, packageCount,peekByte);
 
                         //发送太频繁会断开蓝牙
                         SystemClock.sleep(500);

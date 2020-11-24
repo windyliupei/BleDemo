@@ -33,6 +33,7 @@ import win.lioil.bluetooth.IPackageNotification;
 import win.lioil.bluetooth.MockRequestPackages;
 import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
+import win.lioil.bluetooth.util.BleLog;
 import win.lioil.bluetooth.util.Util;
 
 import static win.lioil.bluetooth.ble.BleServerActivity.UUID_CHAR_WRITE_NOTIFY;
@@ -149,6 +150,10 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
             byte[] msg = characteristic.getValue();
 
+            //Log start：
+            BleLog.r(msg);
+            //log end
+
             mBleReceiver = BleReceiver.getInstance(msg);
 
             //也许是send ack 的 回复，也许是send 之前丢的包儿
@@ -164,6 +169,8 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 }
             }
         }
+
+
 
         @Override
         public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
@@ -200,7 +207,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         });
         rv.setAdapter(mBleDevAdapter);
 
-        //注册 Package 的观察者
+        //注册 Package 的观察者，只注册自己，应为Client 和 Server 不可能同时出现在一个设备上
         PackageRegister.getInstance().clear();
         PackageRegister.getInstance().addedPackageListener(this);
 
@@ -267,9 +274,9 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 }else if(text.equals("4P")){
                     //拼一个2可以内的json
                     text =  MockRequestPackages.generateBigData();
-                }else if(text.equals("99P")){
+                }else if(text.equals("m")){
                     //拼一个2可以内的json
-                    text =  MockRequestPackages.generateBigBigData();
+                    text =  MockRequestPackages.generateRealBigData();
                 }
 
                 TogglePackage.reverse();
@@ -320,9 +327,10 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
     @Override
     public void receiveLastPackage() {
+        logTv("Receive All From Server:");
         if (mBleReceiver!=null){
             String exportToJson = mBleReceiver.exportToJson();
-            logTv("Receive All From Server:"+exportToJson);
+            logTv(exportToJson);
         }
     }
 

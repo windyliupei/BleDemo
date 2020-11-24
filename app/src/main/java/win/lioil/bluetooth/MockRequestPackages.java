@@ -119,6 +119,25 @@ public class MockRequestPackages {
                 "}";
     }
 
+    public static String generateRealBigData(){
+
+        String t = "{\n" +
+                "    \"m\": \"cskt\",\n" +
+                "    \"p\": {\n" +
+                "        \"t\": \"0123456789ABCDEF\",\n" +
+                "        \"name\": \"12345678901234567890ABCD\",\n" +
+                "        \"ref\": \"12345678901234567890ABCD\",\n" +
+                "        \"loc\": \"12345678901234567890ABCD\",\n" +
+                "        \"lo\": \"12345678901234567890ABCD\",\n" +
+                "        \"ro\": \"12345678901234567890ABCD\",\n" +
+                "        \"pid\": \"12345678901234567890ABCD\",\n" +
+                "        \"key\": \"12345678901234567890ABCD\"\n" +
+                "    }\n" +
+                "}";
+
+        return t;
+    }
+
 
 
 }

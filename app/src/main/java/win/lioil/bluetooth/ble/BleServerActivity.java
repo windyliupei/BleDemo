@@ -35,6 +35,7 @@ import win.lioil.bluetooth.IPackageNotification;
 import win.lioil.bluetooth.MockResponsePackages;
 import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
+import win.lioil.bluetooth.util.BleLog;
 import win.lioil.bluetooth.util.Util;
 
 /**
@@ -93,35 +94,15 @@ public class BleServerActivity extends Activity implements IPackageNotification 
 
             mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, requestBytes);// 响应客户端
 
-            String pkgType = "包儿类型：";
-            if (Util.getPkgInfo(requestBytes[0]).isAckR()){
-                pkgType += "Ack,";
-            }if (Util.getPkgInfo(requestBytes[0]).isFragmentation()){
-                pkgType += "Frag,";
-            }if (Util.getPkgInfo(requestBytes[0]).isLastPackage()){
-                pkgType += "Last,";
-            }if (Util.getPkgInfo(requestBytes[0]).isMsgType()){
-                pkgType += "Msg,";
-            }
-            if (pkgType.equals("包儿类型：")){
-                pkgType += "正常包儿:";
-            }
-
-            pkgType+="Togg:"+Util.getPkgInfo(requestBytes[0]).isPackageToggle();
-
-            byte currentPkgIndex = requestBytes[2];
-            byte pageCount = requestBytes[1];
-
-            logTv("!------------------收到对方分包儿--------------------------!");
-            logTv("1.&Page&:"+currentPkgIndex + "/" + pageCount);
-            logTv("2.&&"+pkgType);
-            logTv("3.&分包儿内容&:" + new String(requestBytes));
-            logTv("4.&分包儿内容&:" + Util.bytesToHex(requestBytes));
+            //Log start：
+            BleLog.r(requestBytes);
+            //log end
 
             mBleReceiver = BleReceiver.getInstance(requestBytes);
+            mBleServerSender = BleServerSender.getInstance(characteristic,mBluetoothGattServer,device);
 
             LinkedList<byte[]> needSendBack = mBleReceiver.receiveData(requestBytes);
-            mBleServerSender = BleServerSender.getInstance(characteristic,mBluetoothGattServer,device,this);
+
             if (needSendBack!=null && needSendBack.size()>0){
                 if (mBleServerSender !=null){
                     try {
@@ -173,7 +154,6 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         setContentView(R.layout.activity_bleserver);
         mTips = findViewById(R.id.tv_tips);
         BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-//        BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         // ============启动BLE蓝牙广播(广告) =================================================================================
@@ -194,7 +174,6 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         AdvertiseData scanResponse = new AdvertiseData.Builder()
                 .addManufacturerData(0x0526, manufacturerData)//new byte[]{66, 66}) //设备厂商数据，自定义
                 .addServiceUuid(new ParcelUuid(UUID_SERVICE)) //服务UUID
-//                .addServiceData(new ParcelUuid(UUID_SERVICE), new byte[]{2}) //服务数据，自定义
                 .build();
         mBluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
         mBluetoothLeAdvertiser.startAdvertising(settings, advertiseData, scanResponse, mAdvertiseCallback);
@@ -213,7 +192,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
             mBluetoothGattServer = bluetoothManager.openGattServer(this, mBluetoothGattServerCallback);
         mBluetoothGattServer.addService(service);
 
-        //注册 Package 的观察者
+        //注册 Package 的观察者，只注册自己，应为Client 和 Server 不可能同时出现在一个设备上
         PackageRegister.getInstance().clear();
         PackageRegister.getInstance().addedPackageListener(this);
     }
