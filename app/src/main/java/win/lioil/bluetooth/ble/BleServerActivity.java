@@ -21,6 +21,8 @@ import android.os.ParcelUuid;
 import android.util.Log;
 import android.widget.TextView;
 
+import org.json.JSONException;
+
 import java.net.NetworkInterface;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,6 +32,7 @@ import java.util.UUID;
 
 import win.lioil.bluetooth.APP;
 import win.lioil.bluetooth.IPackageNotification;
+import win.lioil.bluetooth.MockResponsePackages;
 import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
 import win.lioil.bluetooth.util.Util;
@@ -242,13 +245,18 @@ public class BleServerActivity extends Activity implements IPackageNotification 
             String exportToJson = mBleReceiver.exportToJson();
             logTv("Receive All From Client:"+exportToJson);
 
-//            if (mBleServerSender !=null){
-//                try {
-//                    mBleServerSender.sendMessage(exportToJson);
-//                } catch (InterruptedException e) {
-//                    logTv("Send back Error!");
-//                }
-//            }
+            if (mBleServerSender !=null){
+                try {
+                    try {
+                        mBleServerSender.sendMessage(MockResponsePackages.getMockRsp(exportToJson));
+                    } catch (JSONException e) {
+                        logTv("Send back Error!");
+                    }
+
+                } catch (InterruptedException e) {
+                    logTv("Send back Error!");
+                }
+            }
         }
     }
 
