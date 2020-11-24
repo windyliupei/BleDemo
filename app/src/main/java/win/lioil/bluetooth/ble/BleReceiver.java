@@ -78,7 +78,7 @@ public class BleReceiver {
             //TODO：先不发丢包儿
             //目前告诉对方：我都收到了
             byte[] ackRsp = Util.getAckRsp(Util.getPkgInfo(data[0]).isPackageToggle());
-            needSendPkg.add(ackRsp);
+            //needSendPkg.add(ackRsp);
         }
 
         boolean allReceived = isReceiveAll() ;

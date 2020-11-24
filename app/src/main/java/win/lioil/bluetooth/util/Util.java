@@ -2,6 +2,8 @@ package win.lioil.bluetooth.util;
 
 import android.util.Log;
 
+import junit.framework.Assert;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,63 +45,62 @@ public class Util {
 
     public static byte getHead(PackageHead packageHead) {
         byte head = 0x00;
+        String[] binStrArray = new String[]{"0","0","0","0","0","0","0","0"};
         if (packageHead.isMsgType()){
-            head+=0x01;
+            binStrArray[7] = "1";
         }
         if (packageHead.isReserve2()){
-            head+=0x01<<1;
+            binStrArray[6] = "1";
         }
         if (packageHead.isReserve1()){
-            head+=0x01<<2;
+            binStrArray[5] = "1";
         }
         if (packageHead.isLastPackage()){
-            head+=0x01<<3;
+            binStrArray[4] = "1";
         }
         if (packageHead.isEncP()){
-            head+=0x01<<4;
+            binStrArray[3] = "1";
         }
         if (packageHead.isFragmentation()){
-            head+=0x01<<5;
+            binStrArray[2] = "1";
         }
         if (packageHead.isPackageToggle()){
-            head+=0x01<<6;
+            binStrArray[1] = "1";
         }
         if (packageHead.isAckR()){
-            head+=0x01<<7;
+            binStrArray[0] = "1";
         }
+
+        StringBuilder sb = new StringBuilder();
+        if (binStrArray != null && binStrArray.length > 0) {
+            for (int i = 0; i < binStrArray.length; i++) {
+                sb.append(binStrArray[i]);
+            }
+        }
+        String totalStr = sb.toString();
+        head = (byte) Long.parseLong(totalStr,2);
+
+
         return head;
     }
 
     public static PackageHead getPkgInfo(byte head) {
 
+
         PackageHead packageHead = new PackageHead();
-        if((head&1)==1){
-            packageHead.setMsgType(true);
-        }
-        if((head&(1<<1))==1<<1){
-            packageHead.setReserve2(true);
-        }
-        if((head&(1<<2))==1<<2){
-            packageHead.setReserve1(true);
-        }
-        if((head&(1<<3))==1<<3){
-            packageHead.setLastPackage(true);
-        }
-        if((head&(1<<4))==1<<4){
-            packageHead.setEncP(true);
-        }
-        if((head&(1<<5))==1<<5){
-            packageHead.setFragmentation(true);
-        }
-        if((head&(1<<6))==1<<6){
-            packageHead.setPackageToggle(true);
-        }
-        if((head&(1<<7))==1<<7){
-            packageHead.setAckR(true);
-        }
+
+        packageHead.setAckR((head & 0x80) == 0x80);
+        packageHead.setPackageToggle((head & 0x40) == 0x40);
+        packageHead.setFragmentation((head & 0x20) == 0x20);
+        packageHead.setEncP((head & 0x10) == 0x10);
+        packageHead.setLastPackage((head & 0x08) == 0x08);
+        packageHead.setReserve1((head & 0x04) == 0x04);
+        packageHead.setReserve2((head & 0x02) == 0x02);
+        packageHead.setMsgType((head & 0x01) == 0x01);
 
         return packageHead;
     }
+
 
     public static int[] getCountAndIndex(int totalPackage, int arraySize, int currentIndex){
 
@@ -192,4 +193,6 @@ public class Util {
         }
         return isPing;
     }
+
+
 }

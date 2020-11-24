@@ -60,14 +60,14 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         @SuppressLint("HandlerLeak")
         @Override
         public void handleMessage(Message msg) {
-            // TODO Auto-generated method stub
-            if(mBleClientSender!=null){
-                try {
-                    mBleClientSender.sendMessage(" ");
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+
+//            if(mBleClientSender!=null){
+//                try {
+//                    mBleClientSender.sendMessage(" ");
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//            }
 
             super.handleMessage(msg);
         }
@@ -264,9 +264,12 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 if(pattern.matcher(text).matches()){
                     //输入的数字，这个时候拼接成，{"test":"01"} 这样的
                     text = String.format("{\"test\":\"%s\"}",text);
-                }else{
+                }else if(text.equals("4P")){
                     //拼一个2可以内的json
                     text =  MockRequestPackages.generateBigData();
+                }else if(text.equals("99P")){
+                    //拼一个2可以内的json
+                    text =  MockRequestPackages.generateBigBigData();
                 }
 
                 TogglePackage.reverse();

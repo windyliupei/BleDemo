@@ -221,8 +221,8 @@ public class ExampleUnitTest {
     @Test
     public void toPackageHead() {
         PackageHead packageHead = new PackageHead();
-        packageHead.setAckR(true);
         packageHead.setPackageToggle(true);
+        //packageHead.setPackageToggle(true);
         byte head = Util.getHead(packageHead);
         byte[] headBytes = {head};
 
@@ -234,7 +234,7 @@ public class ExampleUnitTest {
     @Test
     public void toHex() {
 
-        //1111111
+        //11111111
         byte head = (byte) 0xff;
         PackageHead hex = Util.getPkgInfo(head);
 
@@ -268,6 +268,38 @@ public class ExampleUnitTest {
 
         //11111110
         head = (byte) 0xfe;
+        hex = Util.getPkgInfo(head);
+
+        //00000000
+        head = (byte) 0x00;
+        hex = Util.getPkgInfo(head);
+
+        //01000000
+        head = (byte) 0x40;
+        hex = Util.getPkgInfo(head);
+
+        //00100000
+        head = (byte) 0x20;
+        hex = Util.getPkgInfo(head);
+
+        //00010000
+        head = (byte) 0x10;
+        hex = Util.getPkgInfo(head);
+
+        //00001000
+        head = (byte) 0x08;
+        hex = Util.getPkgInfo(head);
+
+        //00000100
+        head = (byte) 0x04;
+        hex = Util.getPkgInfo(head);
+
+        //00000010
+        head = (byte) 0x002;
+        hex = Util.getPkgInfo(head);
+
+        //00000001
+        head = (byte) 0x001;
         hex = Util.getPkgInfo(head);
     }
 
@@ -306,5 +338,7 @@ public class ExampleUnitTest {
         test = test.trim().replace("\\","");
         Queue<byte[]> bytes2 = SplitPackage.splitByte(test.getBytes());
     }
+
+
 
 }
