@@ -184,14 +184,15 @@ public class Util {
 
     public static boolean isPing(byte[] data){
 
-        boolean isPing = true;
+       /* boolean isPing = true;
         for (int index = 4;index<20;index++){
             if(data[index] != (byte) 0x99){
                 isPing = false;
                 break;
             }
         }
-        return isPing;
+        return isPing;*/
+        return false;
     }
 
 

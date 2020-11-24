@@ -221,7 +221,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
     @Override
     public void receiveLastPackage() {
         if (mBleReceiver!=null){
-            String exportToJson = mBleReceiver.exportToJson();
+            String exportToJson = ReceiveDataManager.getInstance().expString();
             logTv("Receive All From Client:"+exportToJson);
 
             if (mBleServerSender !=null){
