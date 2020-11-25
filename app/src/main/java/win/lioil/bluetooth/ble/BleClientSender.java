@@ -51,6 +51,8 @@ public class BleClientSender {
             mReqBytesList = SplitPackage.splitByte(text.getBytes());
         }
 
+        SendDataManager.getInstance().reNew(mReqBytesList);
+
         this.sendMessage(mReqBytesList);
     }
 

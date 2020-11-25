@@ -271,12 +271,15 @@ public class BleClientActivity extends Activity implements IPackageNotification 
                 if(pattern.matcher(text).matches()){
                     //输入的数字，这个时候拼接成，{"test":"01"} 这样的
                     text = String.format("{\"test\":\"%s\"}",text);
-                }else if(text.equals("4P")){
+                }else if(text.equals("4p")){
                     //拼一个2可以内的json
                     text =  MockRequestPackages.generateBigData();
-                }else if(text.equals("m")){
+                }else if(text.equals("16p")){
                     //拼一个2可以内的json
                     text =  MockRequestPackages.generateRealBigData();
+                }else if(text.equals("60p")){
+                    //拼一个2可以内的json
+                    text =  MockRequestPackages.generateBigBigData();
                 }
 
                 TogglePackage.reverse();
@@ -327,7 +330,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
     @Override
     public void receiveLastPackage() {
-        logTv("Receive All From Server:");
+        logTv("@@@@Receive All From Server@@@@:");
         if (mBleReceiver!=null){
             String exportToJson = ReceiveDataManager.getInstance().expString();
             logTv(exportToJson);

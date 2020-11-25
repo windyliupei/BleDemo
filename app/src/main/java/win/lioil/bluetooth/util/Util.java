@@ -6,6 +6,7 @@ import junit.framework.Assert;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -101,6 +102,36 @@ public class Util {
         return packageHead;
     }
 
+    public static List<Integer> getPkgIndex(byte byteData,int index) {
+
+        //index=5:8~1包儿
+        //index=6:16~9包儿
+        //...
+
+        List<Integer> lst = new LinkedList<>();
+
+        PackageHead packageHead = new PackageHead();
+
+        //第8位丢失
+        if(((byteData & 0x80) == 0x80)){
+            lst.add(8*index-4);
+        }
+        //第7位丢失
+        if(((byteData & 0x40) == 0x40)){
+            lst.add(8*index-4);
+        }
+
+        packageHead.setPackageToggle((byteData & 0x40) == 0x40);
+        packageHead.setFragmentation((byteData & 0x20) == 0x20);
+        packageHead.setEncP((byteData & 0x10) == 0x10);
+        packageHead.setLastPackage((byteData & 0x08) == 0x08);
+        packageHead.setReserve1((byteData & 0x04) == 0x04);
+        packageHead.setReserve2((byteData & 0x02) == 0x02);
+        packageHead.setMsgType((byteData & 0x01) == 0x01);
+
+        return null;
+    }
+
 
     public static int[] getCountAndIndex(int totalPackage, int arraySize, int currentIndex){
 
@@ -130,7 +161,7 @@ public class Util {
 
         PackageHead head = new PackageHead();
         head.setAckR(false);
-        head.setPackageToggle(packageToggle);
+        head.setPackageToggle(!packageToggle);
         head.setFragmentation(true);
         head.setEncP(false);
         head.setLastPackage(true);
@@ -148,8 +179,6 @@ public class Util {
         for (int index = 4;index<20;index++){
             ackRsp[index] = 0x00;
         }
-
-
 
         return ackRsp;
     }

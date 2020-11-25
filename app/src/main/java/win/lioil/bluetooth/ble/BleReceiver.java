@@ -5,6 +5,7 @@ import java.util.LinkedList;
 import java.util.stream.Stream;
 
 import win.lioil.bluetooth.PackageRegister;
+import win.lioil.bluetooth.SplitPackage;
 import win.lioil.bluetooth.util.Util;
 
 public class BleReceiver {
@@ -48,6 +49,9 @@ public class BleReceiver {
         //这种包儿不包含真实业务的payload的
         if (Util.getPkgInfo(data[0]).isMsgType()){
             //TODO：先不发丢包儿
+            //解析那些包儿丢了
+            LinkedList<byte[]> lostPkgs = new LinkedList<>();
+            needSendPkg = SplitPackage.reCalLostPkg(lostPkgs);
         }else{
             for (int i = 0; i < data.length; i++) {
                 ReceiveDataManager.getInstance().get(currentPkgIndex).put(data[i]);
@@ -55,14 +59,23 @@ public class BleReceiver {
         }
 
         //需要应答给对方，哪些没收到,需要发一个 msgType 为1的包
-        if(Util.getPkgInfo(data[0]).isAckR()){
+        boolean ackR = Util.getPkgInfo(data[0]).isAckR();
+        if(ackR){
             //TODO：先不发丢包儿
             //目前告诉对方：我都收到了
-            //byte[] ackRsp = Util.getAckRsp(Util.getPkgInfo(data[0]).isPackageToggle());
+            byte[] ackRsp = Util.getAckRsp(Util.getPkgInfo(data[0]).isPackageToggle());
             //needSendPkg.add(ackRsp);
+
+            boolean allReceived = ReceiveDataManager.getInstance().isAllReceived(pageCount) ;
+            if (allReceived){
+                //通知所有订阅者 package 收齐了，可以显示界面了
+                PackageRegister.getInstance().notification();
+            }
+
         }
 
-        boolean allReceived = ReceiveDataManager.getInstance().isAllReceived(pageCount) ;
+        //TODO:现在 Device 不发ack，只能这样写
+        //boolean allReceived = ReceiveDataManager.getInstance().isAllReceived(pageCount) ;
         if (isReceiveLastPkg(data)){
             //通知所有订阅者 package 收齐了，可以显示界面了
             PackageRegister.getInstance().notification();
@@ -83,6 +96,8 @@ public class BleReceiver {
                 && Util.getPkgInfo(data[0]).isFragmentation()
                 //一般业务包被设计为最大127包儿，也就是一个帧，所以Fragmentation 为1时，LastPackage也为1
                 && Util.getPkgInfo(data[0]).isLastPackage();
+                //
+                //&& Util.getPkgInfo(data[0]).isAckR();
         return isReceiveLastPkg;
     }
 

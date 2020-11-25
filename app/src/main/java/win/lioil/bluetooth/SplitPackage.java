@@ -1,7 +1,7 @@
 package win.lioil.bluetooth;
 
 import java.util.LinkedList;
-import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import win.lioil.bluetooth.ble.TogglePackage;
 import win.lioil.bluetooth.util.Util;
@@ -10,8 +10,6 @@ public class SplitPackage {
 
     //每个小包二的 payload
     public static final int packageSize = 17;
-    //头包变成了3个
-    private static byte[] headByte = new byte[3];
     //目前支持127个包儿一组
     private static final int packageCount = 127;
 
@@ -35,12 +33,14 @@ public class SplitPackage {
             pkgWholeCount = Math.round((wholeData.length / packageSize) + 1);
         }
 
+        //头包变成了3个
+        byte[] headByte = new byte[3];
         int headLength = headByte.length;
 
         if (pkgWholeCount > 0) {
             for (int pkgWholeIndex = 1; pkgWholeIndex <= pkgWholeCount; pkgWholeIndex++) {
 
-                calHead(TogglePackage.getToggle()==1,pkgWholeCount, pkgWholeIndex);
+                calHead(headByte,TogglePackage.getToggle()==1,pkgWholeCount, pkgWholeIndex);
 
                 byte[] dataPkg;
                 int lastPkgLength;
@@ -66,8 +66,21 @@ public class SplitPackage {
         return byteQueue;
     }
 
+    public static LinkedList<byte[]> reCalLostPkg(LinkedList<byte[]> lostPkgs){
 
-    public static void calHead(boolean packageToggle, int pkgWholeCount, int pkgWholeIndex) {
+        AtomicInteger lostPkgIndex = new AtomicInteger(1);
+        int lostPkgCount = lostPkgs.size();
+        lostPkgs.forEach(lstPkg->{
+            reCalHeadForLostPkg(lstPkg,lostPkgCount, lostPkgIndex.get());
+            lostPkgIndex.getAndIncrement();
+        });
+
+        return lostPkgs;
+
+    }
+
+
+    private static void calHead(byte[] headByte,boolean packageToggle, int pkgWholeCount, int pkgWholeIndex) {
         PackageHead packageHead = new PackageHead();
         //127包儿内的index
         int pkgIndex;
@@ -113,6 +126,45 @@ public class SplitPackage {
         headByte[2] = Util.hexToBytes(indexHex)[0];
 
     }
+
+    private static void reCalHeadForLostPkg(byte[] lostPkg,int pkgWholeCount, int pkgWholeIndex) {
+
+        PackageHead originalHead = Util.getPkgInfo(lostPkg[0]);
+
+        PackageHead newPackageHead = new PackageHead();
+
+        //ACK required = 1, ACK not required = 0
+        //一般会在第127包需要给设备端发一个ack，以便使设备端检查并返回丢失的包儿
+        //这个ack是“要求设备ack”
+        newPackageHead.setAckR(false);
+
+        //packageToggle : when this package set 0, next package is set 1. Inversely, this package set 1, next set 0
+        //包儿的 toggle 0，1 交替
+        newPackageHead.setPackageToggle(originalHead.isPackageToggle());
+
+        //每127包儿要发一个“中包儿”的标记位
+        //1: this is Finish frame, not have next frame, need ack, 0: have next frame
+        newPackageHead.setFragmentation(pkgWholeCount==pkgWholeIndex);
+
+        //不是加密包儿
+        newPackageHead.setEncP(false);
+
+        //是否“业务包”的最后一包儿
+        newPackageHead.setLastPackage(pkgWholeCount==pkgWholeIndex);
+
+        //message type (data, ACK)
+        //0x00 – data fragmentation
+        //0x01 – acknowledge for received message (ACK)，这个ack是“响应设备ack”
+        //数据包儿不需要相应ack
+        newPackageHead.setMsgType(false);
+        lostPkg[0] = Util.getHead(newPackageHead);
+
+
+
+    }
+
+
+
 
 
 }

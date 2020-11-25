@@ -53,7 +53,7 @@ public class BleServerSender {
 
         LinkedList<byte[]> mReqBytesList = new LinkedList<byte[]>();
         mReqBytesList = SplitPackage.splitByte(text.getBytes());
-
+        SendDataManager.getInstance().reNew(mReqBytesList);
         this.sendMessage(mReqBytesList);
 
     }

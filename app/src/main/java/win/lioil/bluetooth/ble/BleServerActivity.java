@@ -18,6 +18,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.ParcelUuid;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -195,6 +196,8 @@ public class BleServerActivity extends Activity implements IPackageNotification 
         //注册 Package 的观察者，只注册自己，应为Client 和 Server 不可能同时出现在一个设备上
         PackageRegister.getInstance().clear();
         PackageRegister.getInstance().addedPackageListener(this);
+
+        mTips.setMovementMethod(ScrollingMovementMethod.getInstance());
     }
 
     @Override
@@ -222,7 +225,7 @@ public class BleServerActivity extends Activity implements IPackageNotification 
     public void receiveLastPackage() {
         if (mBleReceiver!=null){
             String exportToJson = ReceiveDataManager.getInstance().expString();
-            logTv("Receive All From Client:"+exportToJson);
+            logTv("@@@@Receive All From Client@@@@:"+exportToJson);
 
             if (mBleServerSender !=null){
                 try {
