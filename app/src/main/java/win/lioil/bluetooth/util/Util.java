@@ -2,10 +2,7 @@ package win.lioil.bluetooth.util;
 
 import android.util.Log;
 
-import junit.framework.Assert;
-
 import java.io.File;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -14,6 +11,8 @@ import java.util.concurrent.Executors;
 import win.lioil.bluetooth.PackageHead;
 
 public class Util {
+
+    public static final int SENDINTERVAL = 100;
     private static final String TAG = Util.class.getSimpleName();
     public static final Executor EXECUTOR = Executors.newCachedThreadPool();
 
@@ -85,6 +84,35 @@ public class Util {
         return head;
     }
 
+    public static byte getHead2(PackageHead packageHead) {
+        byte head = 0x00;
+        if (packageHead.isMsgType()){
+            head = (byte) (head | 0x01);
+        }
+        if (packageHead.isReserve2()){
+            head = (byte) (head | 0x02);
+        }
+        if (packageHead.isReserve1()){
+            head = (byte) (head | 0x04);
+        }
+        if (packageHead.isLastPackage()){
+            head = (byte) (head | 0x08);
+        }
+        if (packageHead.isEncP()){
+            head = (byte) (head | 0x10);
+        }
+        if (packageHead.isFragmentation()){
+            head = (byte) (head | 0x20);
+        }
+        if (packageHead.isPackageToggle()){
+            head = (byte) (head | 0x40);
+        }
+        if (packageHead.isAckR()){
+            head = (byte) (head | 0x80);
+        }
+        return head;
+    }
+
     public static PackageHead getPkgInfo(byte head) {
 
 
@@ -104,32 +132,66 @@ public class Util {
 
     public static List<Integer> getPkgIndex(byte byteData,int index) {
 
+        //丢包儿数据的byte[]是从 index 为4，开始描述丢包儿信息的
         //index=5:8~1包儿
         //index=6:16~9包儿
         //...
 
+        int offset = (index - 4)*8;
+
         List<Integer> lst = new LinkedList<>();
-
-        PackageHead packageHead = new PackageHead();
-
         //第8位丢失
         if(((byteData & 0x80) == 0x80)){
-            lst.add(8*index-4);
+            lst.add(8+offset);
         }
         //第7位丢失
         if(((byteData & 0x40) == 0x40)){
-            lst.add(8*index-4);
+            lst.add(7+offset);
         }
+        //第6位丢失
+        if(((byteData & 0x20) == 0x20)){
+            lst.add(6+offset);
+        }
+        //第5位丢失
+        if(((byteData & 0x10) == 0x10)){
+            lst.add(5+offset);
+        }
+        //第4位丢失
+        if(((byteData & 0x08) == 0x08)){
+            lst.add(4+offset);
+        }
+        //第3位丢失
+        if(((byteData & 0x04) == 0x04)){
+            lst.add(3+offset);
+        }//第2位丢失
+        if(((byteData & 0x02) == 0x02)){
+            lst.add(2+offset);
+        }
+        //第1位丢失
+        if(((byteData & 0x01) == 0x01)){
+            lst.add(1+offset);
+        }
+         return lst;
+    }
 
-        packageHead.setPackageToggle((byteData & 0x40) == 0x40);
-        packageHead.setFragmentation((byteData & 0x20) == 0x20);
-        packageHead.setEncP((byteData & 0x10) == 0x10);
-        packageHead.setLastPackage((byteData & 0x08) == 0x08);
-        packageHead.setReserve1((byteData & 0x04) == 0x04);
-        packageHead.setReserve2((byteData & 0x02) == 0x02);
-        packageHead.setMsgType((byteData & 0x01) == 0x01);
+    public static byte[] getLostPkgByte(List<Integer> lostPkgs){
 
-        return null;
+        byte[] lostBytes = new byte[16];
+        byte[] calArray = new byte[]{
+            0x01,0x02,0x04,0x08,0x10,0x20,0x40, (byte) 0x80
+        };
+
+        //pkgIdx 丢包儿的index 从1开始
+        lostPkgs.forEach(pkgIdx->{
+
+            Integer socketLostByteArrayIndex = Double.valueOf(Math.ceil((pkgIdx-8)/8.0)).intValue();
+            Integer idx = ((pkgIdx + 8) % 8)==0 ? 8: ((pkgIdx + 8) % 8);
+            System.out.println(pkgIdx);
+            lostBytes[socketLostByteArrayIndex] = (byte) (lostBytes[socketLostByteArrayIndex] | calArray[idx-1]);
+        });
+
+        return lostBytes;
+
     }
 
 

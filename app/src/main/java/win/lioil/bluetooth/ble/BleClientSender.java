@@ -17,6 +17,7 @@ import win.lioil.bluetooth.util.NonReEnterLock;
 import win.lioil.bluetooth.util.Util;
 
 import static win.lioil.bluetooth.ble.BleServerActivity.UUID_CHAR_WRITE_NOTIFY;
+import static win.lioil.bluetooth.util.Util.SENDINTERVAL;
 
 public class BleClientSender {
 
@@ -80,7 +81,7 @@ public class BleClientSender {
                         BleLog.w(index, packageCount,peekByte);
 
                         //发送太频繁会断开蓝牙
-                        SystemClock.sleep(500);
+                        SystemClock.sleep(SENDINTERVAL);
                     }
                 }
             };

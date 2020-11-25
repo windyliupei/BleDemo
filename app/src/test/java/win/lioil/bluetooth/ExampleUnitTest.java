@@ -1,8 +1,12 @@
 package win.lioil.bluetooth;
 
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
+import java.util.Random;
 
 import win.lioil.bluetooth.util.Util;
 
@@ -160,7 +164,7 @@ public class ExampleUnitTest {
 
     @Test
     public void cal() {
-        SplitPackage.calHead(false,257,198);
+       // SplitPackage.calHead(false,257,198);
     }
 
     @Test
@@ -177,7 +181,7 @@ public class ExampleUnitTest {
                 pkgToggleCount = 0;
             }
 
-            SplitPackage.calHead(packageToggle,257,pkgWholeIndex);
+            //SplitPackage.calHead(packageToggle,257,pkgWholeIndex);
 
             pkgToggleCount++;
         }
@@ -223,7 +227,7 @@ public class ExampleUnitTest {
         PackageHead packageHead = new PackageHead();
         packageHead.setPackageToggle(true);
         //packageHead.setPackageToggle(true);
-        byte head = Util.getHead(packageHead);
+        byte head = Util.getHead2(packageHead);
         byte[] headBytes = {head};
 
         String hex = Util.bytesToHex(headBytes);
@@ -339,6 +343,68 @@ public class ExampleUnitTest {
         Queue<byte[]> bytes2 = SplitPackage.splitByte(test.getBytes());
     }
 
+
+    @Test
+    public void lostTest(){
+
+        List<Integer> lost = new ArrayList<>();
+        lost.add(1);
+        lost.add(8);
+        lost.add(60);
+        lost.add(68);
+        lost.add(121);
+        lost.add(127);
+        byte[] lostPkgByte = Util.getLostPkgByte(lost);
+
+        List<Integer> resultI = new ArrayList<>();
+        for (int index = 0;index<lostPkgByte.length;index++){
+            resultI.addAll(Util.getPkgIndex(lostPkgByte[index],index+4));
+        }
+        System.out.println("---");
+
+        resultI.forEach(it->System.out.println(it));
+
+        Assert.assertTrue(resultI.containsAll(lost) && lost.size()==resultI.size() );
+    }
+
+    @Test
+    public void lostTest2(){
+
+
+        while (true){
+            System.out.println("###################################");
+            List<Integer> lost = getDiffNum();
+            byte[] lostPkgByte = Util.getLostPkgByte(lost);
+
+            List<Integer> resultI = new ArrayList<>();
+            for (int index = 0;index<lostPkgByte.length;index++){
+                resultI.addAll(Util.getPkgIndex(lostPkgByte[index],index+4));
+            }
+            System.out.println("---");
+            resultI.forEach(it->System.out.println(it));
+
+            Assert.assertTrue(resultI.containsAll(lost) && lost.size()==resultI.size() );
+        }
+    }
+
+
+
+
+    private static ArrayList<Integer> getDiffNum(){
+
+        ArrayList<Integer> aL=new ArrayList<Integer>();
+        for(int digit=1;digit<128;digit++){
+            aL.add(digit);
+        }
+        System.out.println();
+        for(int result=0;result<113;result++){
+            Random r=new Random();
+            int a=r.nextInt(aL.size());
+            aL.remove(a);
+        }
+
+        return aL;
+    }
 
 
 }
