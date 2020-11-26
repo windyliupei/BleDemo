@@ -43,7 +43,7 @@ public class Util {
 
     }
 
-    public static byte getHead(PackageHead packageHead) {
+    /*public static byte getHead(PackageHead packageHead) {
         byte head = 0x00;
         String[] binStrArray = new String[]{"0","0","0","0","0","0","0","0"};
         if (packageHead.isMsgType()){
@@ -82,7 +82,7 @@ public class Util {
 
 
         return head;
-    }
+    }*/
 
     public static byte getHead2(PackageHead packageHead) {
         byte head = 0x00;
@@ -232,7 +232,7 @@ public class Util {
         head.setMsgType(true);
 
         byte[] ackRsp = new byte[20];
-        ackRsp[0] = Util.getHead(head);
+        ackRsp[0] = Util.getHead2(head);
 
         ackRsp[1] = 0x01;
         ackRsp[2] = 0x01;
@@ -258,7 +258,7 @@ public class Util {
         head.setMsgType(false);
 
         byte[] ackRsp = new byte[20];
-        ackRsp[0] = Util.getHead(head);
+        ackRsp[0] = Util.getHead2(head);
 
         ackRsp[1] = 0x01;
         ackRsp[2] = 0x01;

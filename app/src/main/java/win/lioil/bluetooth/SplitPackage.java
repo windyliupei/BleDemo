@@ -114,7 +114,7 @@ public class SplitPackage {
         //0x01 – acknowledge for received message (ACK)，这个ack是“响应设备ack”
         //数据包儿不需要相应ack
         packageHead.setMsgType(false);
-        headByte[0] = Util.getHead(packageHead);
+        headByte[0] = Util.getHead2(packageHead);
 
         //算第二位,包儿的count （1~127）
         String countHex= Integer.toHexString(eachPackageCount);
@@ -157,7 +157,7 @@ public class SplitPackage {
         //0x01 – acknowledge for received message (ACK)，这个ack是“响应设备ack”
         //数据包儿不需要相应ack
         newPackageHead.setMsgType(false);
-        lostPkg[0] = Util.getHead(newPackageHead);
+        lostPkg[0] = Util.getHead2(newPackageHead);
 
 
 
