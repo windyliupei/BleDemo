@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 
 import win.lioil.bluetooth.APP;
 import win.lioil.bluetooth.IPackageNotification;
+import win.lioil.bluetooth.ITimerNotification;
 import win.lioil.bluetooth.MockRequestPackages;
 import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.R;
@@ -43,7 +44,7 @@ import static win.lioil.bluetooth.ble.BleServerActivity.UUID_SERVICE;
 /**
  * BLE客户端(主机/中心设备/Central)
  */
-public class BleClientActivity extends Activity implements IPackageNotification {
+public class BleClientActivity extends Activity implements IPackageNotification, ITimerNotification {
     private static final String TAG = BleClientActivity.class.getSimpleName();
     private EditText mWriteET;
     private TextView mTips;
@@ -55,24 +56,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
     private BleReceiver mBleReceiver;
     private BleClientSender mBleClientSender;
 
-    private final Timer timer = new Timer();
-    private TimerTask task;
-    Handler handler = new Handler() {
-        @SuppressLint("HandlerLeak")
-        @Override
-        public void handleMessage(Message msg) {
 
-//            if(mBleClientSender!=null){
-//                try {
-//                    mBleClientSender.sendMessage(" ");
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-
-            super.handleMessage(msg);
-        }
-    };
 
     // 与服务端连接的Callback
     public BluetoothGattCallback mBluetoothGattCallback = new BluetoothGattCallback() {
@@ -124,7 +108,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
 
                 //连接 BLE 设备后的操作
                 mBleClientSender = BleClientSender.getInstance(mBluetoothGatt,service);
-                timer.schedule(task,5000,5000);
+
                 TogglePackage.reset();
             }
         }
@@ -210,16 +194,7 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         //注册 Package 的观察者，只注册自己，应为Client 和 Server 不可能同时出现在一个设备上
         PackageRegister.getInstance().clear();
         PackageRegister.getInstance().addedPackageListener(this);
-
-        task = new TimerTask() {
-            @Override
-            public void run() {
-
-                Message message = new Message();
-                message.what = 1;
-                handler.sendMessage(message);
-            }
-        };
+        PackageRegister.getInstance().addedTimeoutListener(this);
 
     }
 
@@ -249,6 +224,14 @@ public class BleClientActivity extends Activity implements IPackageNotification 
     // 注意：连续频繁读写数据容易失败，读写操作间隔最好200ms以上，或等待上次回调完成后再进行下次读写操作！
     // 写入数据成功会回调->onCharacteristicWrite()
     public void write(View view) {
+
+        if (mBleReceiver!=null){
+            mBleReceiver.startReceive();
+        }
+        if (mBleClientSender!=null){
+            mBleClientSender.startSend();
+        }
+
         BluetoothGattService service = getGattService(UUID_SERVICE);
 
 
@@ -302,6 +285,18 @@ public class BleClientActivity extends Activity implements IPackageNotification 
     }
 
 
+    public void stop(View view) {
+
+        if (mBleClientSender!=null){
+            mBleClientSender.stopSend();
+        }
+
+        if (mBleReceiver != null){
+            mBleReceiver.stopReceive();
+        }
+
+    }
+
 
     // 获取Gatt服务
     private BluetoothGattService getGattService(UUID uuid) {
@@ -337,15 +332,9 @@ public class BleClientActivity extends Activity implements IPackageNotification 
         }
     }
 
-    /*private void writeSinglePackage(byte[] singleByte){
+    @Override
+    public void showTimeout() {
+        APP.toast("Time Out!", 3);
+    }
 
-        Util.getAckRsp(packageToggle)
-
-        BluetoothGattService service = getGattService(UUID_SERVICE);
-        BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID_CHAR_WRITE_NOTIFY);//通过UUID获取可写的Characteristic
-
-        characteristic.setValue(singleByte);
-        mBluetoothGatt.writeCharacteristic(characteristic);
-        logTv("发送 Ack Package:"+Util.bytesToHex(singleByte));
-    }*/
 }

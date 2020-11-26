@@ -12,6 +12,7 @@ public class BleReceiver {
 
 
     private boolean currentToggle = false;
+    private volatile boolean stopReceive = false;
 
 
     public static BleReceiver getInstance(byte[] data) {
@@ -36,6 +37,10 @@ public class BleReceiver {
 
 
     public LinkedList<byte[]> receiveData(byte[] data){
+
+        if (stopReceive){
+            return null;
+        }
 
         if(Util.isPing(data)){
             return null;
@@ -70,6 +75,7 @@ public class BleReceiver {
             if (allReceived){
                 //通知所有订阅者 package 收齐了，可以显示界面了
                 PackageRegister.getInstance().notification();
+                TaskCommunicator.getInstance().stopTimer();
             }
 
         }
@@ -79,9 +85,19 @@ public class BleReceiver {
         if (isReceiveLastPkg(data)){
             //通知所有订阅者 package 收齐了，可以显示界面了
             PackageRegister.getInstance().notification();
+            TaskCommunicator.getInstance().stopTimer();
         }
 
         return needSendPkg;
+    }
+
+    public void stopReceive(){
+        stopReceive = true;
+        ReceiveDataManager.getInstance().clear();
+    }
+
+    public void startReceive(){
+        stopReceive = false;
     }
 
 

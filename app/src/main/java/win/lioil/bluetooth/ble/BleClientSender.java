@@ -10,11 +10,9 @@ import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import win.lioil.bluetooth.PackageRegister;
 import win.lioil.bluetooth.SplitPackage;
 import win.lioil.bluetooth.util.BleLog;
 import win.lioil.bluetooth.util.NonReEnterLock;
-import win.lioil.bluetooth.util.Util;
 
 import static win.lioil.bluetooth.ble.BleServerActivity.UUID_CHAR_WRITE_NOTIFY;
 import static win.lioil.bluetooth.util.Util.SENDINTERVAL;
@@ -26,6 +24,10 @@ public class BleClientSender {
     private BluetoothGattService mService;
     private NonReEnterLock lock = new NonReEnterLock();
     private final ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
+    private volatile boolean stopReceive = false;
+
+
+
 
 
     public static BleClientSender getInstance(BluetoothGatt bluetoothGatt,BluetoothGattService service) {
@@ -34,6 +36,8 @@ public class BleClientSender {
         sender.mBluetoothGatt = bluetoothGatt;
         return sender;
     }
+
+
 
     private static class BleClientSenderHolder {
         private static final BleClientSender sBleManager = new BleClientSender();
@@ -72,6 +76,11 @@ public class BleClientSender {
 
                     for (int index = 0; index < packageCount; index++) {
 
+                        if (stopReceive){
+                            Log.i("STOP","Stop sending...");
+                            continue;
+                        }
+
                         //这里只取得数据，并不删除，当response ack后把确认发送成功的再删掉
                         byte[] peekByte = reqBytesList.get(index);
 
@@ -79,6 +88,12 @@ public class BleClientSender {
                         mBluetoothGatt.writeCharacteristic(characteristic);
 
                         BleLog.w(index, packageCount,peekByte);
+
+                        if (index+1 == packageCount){
+                            TaskCommunicator taskCommunicator = TaskCommunicator.getInstance();
+                            taskCommunicator.startTimer();
+
+                        }
 
                         //发送太频繁会断开蓝牙
                         SystemClock.sleep(SENDINTERVAL);
@@ -90,6 +105,14 @@ public class BleClientSender {
         }
         //释放锁
         lock.unlock();
+    }
+
+    public void stopSend(){
+        stopReceive = true;
+    }
+
+    public void startSend() {
+        stopReceive = false;
     }
 
 }

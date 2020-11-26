@@ -11,4 +11,5 @@
     <string name="setNotify">设置通知</string>
     <string name="max_byte">最多20字节</string>
     <string name="write">写入</string>
+    <string name="stop">Stop</string>
 </resources>

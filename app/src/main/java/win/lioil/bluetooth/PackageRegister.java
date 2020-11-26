@@ -14,9 +14,14 @@ public class PackageRegister {
     }
 
     List<IPackageNotification> list = new ArrayList<>();
+    List<ITimerNotification> timeoutList = new ArrayList<>();
 
     public void addedPackageListener(IPackageNotification notification){
         list.add(notification);
+    }
+
+    public void addedTimeoutListener(ITimerNotification notification){
+        timeoutList.add(notification);
     }
 
     public void notification(){
@@ -28,6 +33,12 @@ public class PackageRegister {
     public void log(String str){
         for (IPackageNotification p : list) {
             p.logTv(str);
+        }
+    }
+
+    public void timeout(){
+        for (ITimerNotification p : timeoutList) {
+            p.showTimeout();
         }
     }
 
