@@ -227,7 +227,7 @@ public class ExampleUnitTest {
         PackageHead packageHead = new PackageHead();
         packageHead.setPackageToggle(true);
         //packageHead.setPackageToggle(true);
-        byte head = Util.getHead2(packageHead);
+        byte head = Util.getHead(packageHead);
         byte[] headBytes = {head};
 
         String hex = Util.bytesToHex(headBytes);
@@ -362,7 +362,7 @@ public class ExampleUnitTest {
         }
         System.out.println("---");
 
-        resultI.forEach(it->System.out.println(it));
+
 
         Assert.assertTrue(resultI.containsAll(lost) && lost.size()==resultI.size() );
     }
@@ -381,7 +381,7 @@ public class ExampleUnitTest {
                 resultI.addAll(Util.getPkgIndex(lostPkgByte[index],index+4));
             }
             System.out.println("---");
-            resultI.forEach(it->System.out.println(it));
+
 
             Assert.assertTrue(resultI.containsAll(lost) && lost.size()==resultI.size() );
         }

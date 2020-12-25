@@ -2,13 +2,17 @@ package win.lioil.bluetooth.ble;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.bluetooth.BluetoothA2dp;
+import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothProfile;
+import android.content.IntentFilter;
 import android.os.Bundle;
 
 import android.os.Handler;
@@ -19,6 +23,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -55,6 +60,7 @@ public class BleClientActivity extends Activity implements IPackageNotification,
 
     private BleReceiver mBleReceiver;
     private BleClientSender mBleClientSender;
+    private BluetoothReceiver mBluetoothReceiver;
 
 
 
@@ -74,6 +80,11 @@ public class BleClientActivity extends Activity implements IPackageNotification,
                 isConnected = false;
                 closeConn();
                 logTv(String.format(status == 0 ? (newState == 2 ? "与[%s]连接成功" : "与[%s]连接断开") : ("与[%s]连接出错,错误码:" + status), dev));
+                if (status != 0){
+                    APP.toast("与"+dev.getName()+":"+dev.getAddress()+":"+"断开连接",5);
+                }
+
+
             }
         }
 
@@ -190,6 +201,14 @@ public class BleClientActivity extends Activity implements IPackageNotification,
             }
         });
         rv.setAdapter(mBleDevAdapter);
+
+        //自己的蓝牙断开事件
+        mBluetoothReceiver = new BluetoothReceiver();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(BluetoothAdapter.EXTRA_CONNECTION_STATE); //BluetoothAdapter连接状态
+        intentFilter.addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED); //BluetoothHeadset连接状态
+        intentFilter.addAction(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED); //BluetoothA2dp连接状态
+        registerReceiver(mBluetoothReceiver,intentFilter);
 
         //注册 Package 的观察者，只注册自己，应为Client 和 Server 不可能同时出现在一个设备上
         PackageRegister.getInstance().clear();

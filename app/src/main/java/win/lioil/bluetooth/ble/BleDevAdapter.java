@@ -83,7 +83,7 @@ public class BleDevAdapter extends RecyclerView.Adapter<BleDevAdapter.VH> {
         String name = dev.dev.getName();
         String address = dev.dev.getAddress();
         holder.name.setText(String.format("%s, %s, Rssi=%s", name, address, dev.scanResult.getRssi()));
-        holder.address.setText(String.format("广播数据{%s}", dev.scanResult.getScanRecord()));
+        //holder.address.setText(String.format("广播数据{%s}", dev.scanResult.getScanRecord()));
     }
 
     @Override
