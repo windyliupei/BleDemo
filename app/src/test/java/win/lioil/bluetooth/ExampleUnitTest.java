@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Random;
@@ -354,36 +355,43 @@ public class ExampleUnitTest {
         lost.add(68);
         lost.add(121);
         lost.add(127);
+
+        lostTest1(lost);
+
+    }
+
+
+    private void lostTest1(List<Integer> lost){
+
         byte[] lostPkgByte = Util.getLostPkgByte(lost);
+        byte[] ackPkgHead = new byte[4];
+        ackPkgHead[0] = 0x01;
+        ackPkgHead[1] = 0x01;
+        ackPkgHead[2] = 0x01;
+        ackPkgHead[3] = 0x00;
 
-        List<Integer> resultI = new ArrayList<>();
-        for (int index = 0;index<lostPkgByte.length;index++){
-            resultI.addAll(Util.getPkgIndex(lostPkgByte[index],index+4));
-        }
-        System.out.println("---");
+        byte[] wholePck = new byte[20];
+        System.arraycopy(ackPkgHead,0,wholePck,0,ackPkgHead.length);
+        System.arraycopy(lostPkgByte,0,wholePck,4,lostPkgByte.length);
+
+        List<Integer> lostPkgIndex = Util.getLostPkgIndex(wholePck);
 
 
-
-        Assert.assertTrue(resultI.containsAll(lost) && lost.size()==resultI.size() );
+        Assert.assertTrue(lostPkgIndex.containsAll(lost) && lost.size()==lostPkgIndex.size() );
     }
 
     @Test
     public void lostTest2(){
 
-
         while (true){
-            System.out.println("###################################");
-            List<Integer> lost = getDiffNum();
-            byte[] lostPkgByte = Util.getLostPkgByte(lost);
 
-            List<Integer> resultI = new ArrayList<>();
-            for (int index = 0;index<lostPkgByte.length;index++){
-                resultI.addAll(Util.getPkgIndex(lostPkgByte[index],index+4));
-            }
-            System.out.println("---");
+            Random r=new Random();
+            Integer lostCount = r.nextInt(80);
 
+            System.out.println("Lost:"+lostCount);
 
-            Assert.assertTrue(resultI.containsAll(lost) && lost.size()==resultI.size() );
+            List<Integer> lost = getDiffNumByCount(lostCount);
+            lostTest1(lost);
         }
     }
 
@@ -396,7 +404,7 @@ public class ExampleUnitTest {
         for(int digit=1;digit<128;digit++){
             aL.add(digit);
         }
-        System.out.println();
+
         for(int result=0;result<113;result++){
             Random r=new Random();
             int a=r.nextInt(aL.size());
@@ -404,6 +412,40 @@ public class ExampleUnitTest {
         }
 
         return aL;
+    }
+
+    private static ArrayList<Integer> getDiffNumByCount(int lostCount){
+
+        ArrayList<Integer> aL=new ArrayList<Integer>();
+        for(int digit=1;digit<128;digit++){
+            aL.add(digit);
+        }
+
+        int receivedCount = Math.max(127 - lostCount, 1);
+
+        for(int result=0;result<receivedCount;result++){
+            Random r=new Random();
+            try{
+                int a=r.nextInt(aL.size());
+                aL.remove(a);
+            }catch (Exception e){
+                System.out.println("!!!!!!!!!!!!!!!!!");
+            }
+        }
+
+        return aL;
+    }
+
+
+    @Test
+    public void calPackageSize(){
+        String str = "{\"p\":{\"lo\":\"najajjs\",\"t\":\"0123456789abcdef\",\"ro\":\"jajkska\",\"ref\":\"Â¥Â¥Â¥Â¥ttt\",\"sid\":\"C145D2D8367E\",\"loc\":\"urge\",\"name\":\"456\"},\"m\":\"wskt}";
+        str = str.replace(" ","");
+
+        LinkedList<byte[]> bytes = SplitPackage.splitByte(str.getBytes());
+
+        Assert.assertTrue(bytes.size()>1);
+
     }
 
 

@@ -3,6 +3,7 @@ package win.lioil.bluetooth.util;
 import android.util.Log;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -43,46 +44,7 @@ public class Util {
 
     }
 
-    /*public static byte getHead(PackageHead packageHead) {
-        byte head = 0x00;
-        String[] binStrArray = new String[]{"0","0","0","0","0","0","0","0"};
-        if (packageHead.isMsgType()){
-            binStrArray[7] = "1";
-        }
-        if (packageHead.isReserve2()){
-            binStrArray[6] = "1";
-        }
-        if (packageHead.isReserve1()){
-            binStrArray[5] = "1";
-        }
-        if (packageHead.isLastPackage()){
-            binStrArray[4] = "1";
-        }
-        if (packageHead.isEncP()){
-            binStrArray[3] = "1";
-        }
-        if (packageHead.isFragmentation()){
-            binStrArray[2] = "1";
-        }
-        if (packageHead.isPackageToggle()){
-            binStrArray[1] = "1";
-        }
-        if (packageHead.isAckR()){
-            binStrArray[0] = "1";
-        }
 
-        StringBuilder sb = new StringBuilder();
-        if (binStrArray != null && binStrArray.length > 0) {
-            for (int i = 0; i < binStrArray.length; i++) {
-                sb.append(binStrArray[i]);
-            }
-        }
-        String totalStr = sb.toString();
-        head = (byte) Long.parseLong(totalStr,2);
-
-
-        return head;
-    }*/
 
     public static byte getHead(PackageHead packageHead) {
         byte head = 0x00;
@@ -130,69 +92,7 @@ public class Util {
         return packageHead;
     }
 
-    public static List<Integer> getPkgIndex(byte byteData,int index) {
 
-        //丢包儿数据的byte[]是从 index 为4，开始描述丢包儿信息的
-        //index=5:8~1包儿
-        //index=6:16~9包儿
-        //...
-
-        int offset = (index - 4)*8;
-
-        List<Integer> lst = new LinkedList<>();
-        //第8位丢失
-        if(((byteData & 0x80) == 0x80)){
-            lst.add(8+offset);
-        }
-        //第7位丢失
-        if(((byteData & 0x40) == 0x40)){
-            lst.add(7+offset);
-        }
-        //第6位丢失
-        if(((byteData & 0x20) == 0x20)){
-            lst.add(6+offset);
-        }
-        //第5位丢失
-        if(((byteData & 0x10) == 0x10)){
-            lst.add(5+offset);
-        }
-        //第4位丢失
-        if(((byteData & 0x08) == 0x08)){
-            lst.add(4+offset);
-        }
-        //第3位丢失
-        if(((byteData & 0x04) == 0x04)){
-            lst.add(3+offset);
-        }//第2位丢失
-        if(((byteData & 0x02) == 0x02)){
-            lst.add(2+offset);
-        }
-        //第1位丢失
-        if(((byteData & 0x01) == 0x01)){
-            lst.add(1+offset);
-        }
-         return lst;
-    }
-
-    public static byte[] getLostPkgByte(List<Integer> lostPkgs){
-
-        byte[] lostBytes = new byte[16];
-        byte[] calArray = new byte[]{
-            0x01,0x02,0x04,0x08,0x10,0x20,0x40, (byte) 0x80
-        };
-
-        //pkgIdx 丢包儿的index 从1开始
-        lostPkgs.forEach(pkgIdx->{
-
-            Integer socketLostByteArrayIndex = Double.valueOf(Math.ceil((pkgIdx-8)/8.0)).intValue();
-            Integer idx = ((pkgIdx + 8) % 8)==0 ? 8: ((pkgIdx + 8) % 8);
-            System.out.println(pkgIdx);
-            lostBytes[socketLostByteArrayIndex] = (byte) (lostBytes[socketLostByteArrayIndex] | calArray[idx-1]);
-        });
-
-        return lostBytes;
-
-    }
 
 
     public static int[] getCountAndIndex(int totalPackage, int arraySize, int currentIndex){
@@ -286,5 +186,105 @@ public class Util {
         return false;
     }
 
+    /*
+    处理丢包和Ack
+    * */
+    private static List<Integer> getPkgIndex(byte byteData,int index) {
+
+        //丢包儿数据的byte[]是从 index 为4，开始描述丢包儿信息的
+        //index=5:8~1包儿
+        //index=6:16~9包儿
+        //...
+
+        int offset = (index - 4)*8;
+
+        List<Integer> lst = new LinkedList<>();
+        //第8位丢失
+        if(((byteData & 0x80) == 0x80)){
+            lst.add(8+offset);
+        }
+        //第7位丢失
+        if(((byteData & 0x40) == 0x40)){
+            lst.add(7+offset);
+        }
+        //第6位丢失
+        if(((byteData & 0x20) == 0x20)){
+            lst.add(6+offset);
+        }
+        //第5位丢失
+        if(((byteData & 0x10) == 0x10)){
+            lst.add(5+offset);
+        }
+        //第4位丢失
+        if(((byteData & 0x08) == 0x08)){
+            lst.add(4+offset);
+        }
+        //第3位丢失
+        if(((byteData & 0x04) == 0x04)){
+            lst.add(3+offset);
+        }//第2位丢失
+        if(((byteData & 0x02) == 0x02)){
+            lst.add(2+offset);
+        }
+        //第1位丢失
+        if(((byteData & 0x01) == 0x01)){
+            lst.add(1+offset);
+        }
+        return lst;
+    }
+
+
+
+
+    public static List<Integer> getLostPkgIndex(byte[] wholeLostPkgByte){
+
+        //Remove 掉前四位（20-4），只留丢包的有效数据
+        byte[] lostPkgByte = new byte[16];
+        System.arraycopy(wholeLostPkgByte,4,lostPkgByte,0,16);
+
+        List<Integer> resultIndex = new ArrayList<>();
+        for (int index = 0;index<lostPkgByte.length;index++){
+            resultIndex.addAll(Util.getPkgIndex(lostPkgByte[index],index+4));
+        }
+        return resultIndex;
+    }
+
+    public static byte[] getLostPkgByte(List<Integer> lostPkgs){
+
+        byte[] lostBytes = new byte[16];
+        byte[] calArray = new byte[]{
+                0x01,0x02,0x04,0x08,0x10,0x20,0x40, (byte) 0x80
+        };
+
+        //pkgIdx 丢包儿的index 从1开始
+        lostPkgs.forEach(pkgIdx->{
+
+            Integer socketLostByteArrayIndex = Double.valueOf(Math.ceil((pkgIdx-8)/8.0)).intValue();
+            Integer idx = ((pkgIdx + 8) % 8)==0 ? 8: ((pkgIdx + 8) % 8);
+            //System.out.println(pkgIdx);
+            lostBytes[socketLostByteArrayIndex] = (byte) (lostBytes[socketLostByteArrayIndex] | calArray[idx-1]);
+        });
+
+        return lostBytes;
+
+    }
+
+    public static byte[] getFullLostPkgByte(List<Integer> lostPkgs){
+
+        byte[] wholePck = new byte[20];
+        byte[] lostPkgByte = getLostPkgByte(lostPkgs);
+
+        byte[] ackPkgHead = new byte[4];
+        ackPkgHead[0] = 0x01;
+        ackPkgHead[1] = 0x01;
+        ackPkgHead[2] = 0x01;
+        ackPkgHead[3] = 0x00;
+
+        System.arraycopy(ackPkgHead,0,wholePck,0,ackPkgHead.length);
+        System.arraycopy(lostPkgByte,0,wholePck,4,lostPkgByte.length);
+
+        return wholePck;
+
+    }
 
 }
