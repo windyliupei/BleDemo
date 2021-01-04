@@ -398,7 +398,7 @@ public class ExampleUnitTest {
 
 
 
-    private static ArrayList<Integer> getDiffNum(){
+    /*private static ArrayList<Integer> getDiffNum(){
 
         ArrayList<Integer> aL=new ArrayList<Integer>();
         for(int digit=1;digit<128;digit++){
@@ -412,7 +412,7 @@ public class ExampleUnitTest {
         }
 
         return aL;
-    }
+    }*/
 
     private static ArrayList<Integer> getDiffNumByCount(int lostCount){
 

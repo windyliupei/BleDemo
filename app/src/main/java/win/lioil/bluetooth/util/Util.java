@@ -259,7 +259,13 @@ public class Util {
         //pkgIdx 丢包儿的index 从1开始
         lostPkgs.forEach(pkgIdx->{
 
+            //socketLostByteArrayIndex ：返回丢包儿数组，的index。
+            //0：丢包儿数组的第一个：也就是第1～8  包儿的丢失情况
+            //1：丢包儿数组的第一个：也就是第9～16 包儿的丢失情况
             Integer socketLostByteArrayIndex = Double.valueOf(Math.ceil((pkgIdx-8)/8.0)).intValue();
+
+            //idx：或运算的 index
+            //0： 0x01，1：0x02
             Integer idx = ((pkgIdx + 8) % 8)==0 ? 8: ((pkgIdx + 8) % 8);
             //System.out.println(pkgIdx);
             lostBytes[socketLostByteArrayIndex] = (byte) (lostBytes[socketLostByteArrayIndex] | calArray[idx-1]);
